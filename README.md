@@ -8,9 +8,11 @@ ShowCQT display.
 
 - Audio decoding, filtering, ShowCQT analysis, and bzip2 session generation run
   in the browser. Audio is not uploaded.
-- The generated session contains the 960-bin analysis but intentionally does
-  not embed or reference the source audio. This makes it portable across macOS
-  and Windows and avoids exposing a local absolute file path.
+- The generated session contains the 960-bin analysis and references the
+  original audio by filename. Keep the `.sv` next to the unmodified MP3/WAV
+  when opening it in Sonic Visualiser. If prompted, locate the original audio.
+- The session does not embed audio or expose an absolute path, so the pair of
+  files can be moved between macOS and Windows.
 - Sonic Visualiser opens the generated `.sv` directly, with Magma, smoothing,
   linear scale, no normalization, and note-name bins already configured.
 

@@ -83,7 +83,7 @@ async function analyse(file) {
     if (data.type === 'error') showError(data.message);
   };
   worker.onerror = event => showError(event.message || 'เกิดข้อผิดพลาดระหว่างวิเคราะห์');
-  worker.postMessage({ left: decoded.left.buffer, right: decoded.right.buffer, sampleRate: decoded.sampleRate }, [decoded.left.buffer, decoded.right.buffer]);
+  worker.postMessage({ left: decoded.left.buffer, right: decoded.right.buffer, sampleRate: decoded.sampleRate, fileName: file.name }, [decoded.left.buffer, decoded.right.buffer]);
 }
 
 function showError(message) {

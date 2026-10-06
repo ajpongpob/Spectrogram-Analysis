@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-BzsvvkrF.js"></script>
+  <script type="module" crossorigin src="./assets/index-FAbj8GuZ.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-DyEncfql.css">
 </head>
 <body>
@@ -55,7 +55,7 @@
         <div id="result" class="result" hidden>
           <div class="result-copy">
             <span class="check">✓</span>
-            <div><strong>ไฟล์พร้อมเปิดแล้ว</strong><small>ดับเบิลคลิกไฟล์ .sv หรือเปิดผ่าน File → Open ใน Sonic Visualiser</small></div>
+            <div><strong>ไฟล์พร้อมเปิดแล้ว</strong><small>วางไฟล์ .sv ไว้โฟลเดอร์เดียวกับเพลงต้นฉบับ แล้วเปิดด้วย Sonic Visualiser</small></div>
           </div>
           <button id="download" class="primary-button" type="button">ดาวน์โหลดไฟล์ .sv</button>
         </div>
@@ -73,10 +73,11 @@
       <summary>วิธีเปิดผลลัพธ์ใน Sonic Visualiser</summary>
       <ol>
         <li>ดาวน์โหลดไฟล์ที่ลงท้ายด้วย <code>-Musical-Detail.sv</code></li>
-        <li>เปิด Sonic Visualiser แล้วเลือก <strong>File → Open</strong></li>
-        <li>เลือกไฟล์ .sv ผลวิเคราะห์จะแสดงด้วยสี Magma และแกนชื่อโน้ตทันที</li>
+        <li>เก็บไฟล์ .sv ไว้โฟลเดอร์เดียวกับไฟล์เพลงต้นฉบับ โดยคงชื่อไฟล์เพลงเดิมไว้</li>
+        <li>เปิด Sonic Visualiser แล้วเลือก <strong>File → Open</strong> เพื่อเปิดไฟล์ .sv</li>
+        <li>ผลวิเคราะห์จะแสดงด้วยสี Magma และแกนชื่อโน้ต หากโปรแกรมถามหาไฟล์เสียง ให้เลือกเพลงต้นฉบับ</li>
       </ol>
-      <p>ไฟล์ผลลัพธ์เก็บเฉพาะภาพวิเคราะห์เพื่อให้ย้ายข้าม Mac/Windows ได้ จึงไม่มีเสียงเล่นประกอบภายใน session</p>
+      <p>ไฟล์ .sv เก็บผลวิเคราะห์และอ้างอิงเพลงต้นฉบับตามชื่อไฟล์ จึงต้องมีเพลงต้นฉบับอยู่ด้วยเมื่อต้องการเปิดดูหรือฟัง</p>
     </details>
 
     <footer>ShowCQT engine · Musical Detail v1 · ค่าผลลัพธ์เป็นความเข้มเพื่อการแสดงภาพ ไม่ใช่ dB หรือการถอดโน้ต</footer>
