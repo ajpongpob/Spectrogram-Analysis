@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <link rel="icon" href="data:,">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="แปลง MP3 หรือ WAV เป็น ShowCQT Musical Detail สำหรับ Sonic Visualiser โดยประมวลผลในเบราว์เซอร์">
+  <title>ShowCQT Musical Detail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-B3cKthL0.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DyEncfql.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div>
+        <p class="eyebrow">MUSICAL DETAIL · LOCAL ANALYSIS</p>
+        <h1>เปลี่ยนเสียงให้มองเห็น</h1>
+        <p class="lede">สร้างแผนภาพ ShowCQT สำหรับ Sonic Visualiser จาก MP3 หรือ WAV โดยเพลงไม่ออกจากเครื่องของคุณ</p>
+      </div>
+    </header>
+
+    <section class="workspace" aria-labelledby="drop-title">
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-describedby="drop-help">
+        <input id="file-input" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,.mp3,.wav" hidden>
+        <div class="drop-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M24 6v25m0-25-8 8m8-8 8 8M9 29v9a4 4 0 0 0 4 4h22a4 4 0 0 0 4-4v-9"/></svg>
+        </div>
+        <h2 id="drop-title">ลากไฟล์เพลงมาวางที่นี่</h2>
+        <p id="drop-help">หรือคลิกเพื่อเลือกไฟล์ · MP3 / WAV</p>
+        <span class="privacy-pill">ประมวลผลในเครื่อง 100%</span>
+      </div>
+
+      <div id="job" class="job" hidden>
+        <div class="job-head">
+          <div>
+            <p class="label">ไฟล์ที่เลือก</p>
+            <h2 id="file-name"></h2>
+            <p id="file-meta" class="meta"></p>
+          </div>
+          <button id="change-file" class="quiet-button" type="button">เปลี่ยนไฟล์</button>
+        </div>
+
+        <div class="meter" aria-hidden="true"><div id="meter-fill"></div></div>
+        <div class="status-line">
+          <span id="status">กำลังเตรียมเสียง…</span>
+          <strong id="percent">0%</strong>
+        </div>
+
+        <canvas id="preview" width="960" height="320" aria-label="ภาพตัวอย่างผลการวิเคราะห์"></canvas>
+
+        <div id="result" class="result" hidden>
+          <div class="result-copy">
+            <span class="check">✓</span>
+            <div><strong>ไฟล์พร้อมเปิดแล้ว</strong><small>ดับเบิลคลิกไฟล์ .sv หรือเปิดผ่าน File → Open ใน Sonic Visualiser</small></div>
+          </div>
+          <button id="download" class="primary-button" type="button">ดาวน์โหลดไฟล์ .sv</button>
+        </div>
+        <p id="error" class="error" role="alert" hidden></p>
+      </div>
+    </section>
+
+    <section class="facts" aria-label="รายละเอียดการวิเคราะห์">
+      <article><span>960</span><p>ช่องความถี่แบบ CQT<br>พร้อมชื่อโน้ต</p></article>
+      <article><span>60 fps</span><p>รายละเอียดตามเวลา<br>สำหรับแนวทำนอง</p></article>
+      <article><span>20 Hz–20 kHz</span><p>ครอบคลุมองค์ประกอบ<br>ตั้งแต่เบสถึงย่านสูง</p></article>
+    </section>
+
+    <details class="howto">
+      <summary>วิธีเปิดผลลัพธ์ใน Sonic Visualiser</summary>
+      <ol>
+        <li>ดาวน์โหลดไฟล์ที่ลงท้ายด้วย <code>-Musical-Detail.sv</code></li>
+        <li>เปิด Sonic Visualiser แล้วเลือก <strong>File → Open</strong></li>
+        <li>เลือกไฟล์ .sv ผลวิเคราะห์จะแสดงด้วยสี Magma และแกนชื่อโน้ตทันที</li>
+      </ol>
+      <p>ไฟล์ผลลัพธ์เก็บเฉพาะภาพวิเคราะห์เพื่อให้ย้ายข้าม Mac/Windows ได้ จึงไม่มีเสียงเล่นประกอบภายใน session</p>
+    </details>
+
+    <footer>ShowCQT engine · Musical Detail v1 · ค่าผลลัพธ์เป็นความเข้มเพื่อการแสดงภาพ ไม่ใช่ dB หรือการถอดโน้ต</footer>
+  </main>
+</body>
+</html>
