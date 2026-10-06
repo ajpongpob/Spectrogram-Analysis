@@ -22,6 +22,32 @@ function filterInPlace(data) {
   for(let i=0;i<data.length;i++){const x=data[i]+1e-9;yp=x+b*xp-a*yp;xp=x;data[i]=yp+1e9-1e9;}
 }
 
+function compressSession(bzip2, source) {
+  // The wrapper captures HEAPU8 before _malloc. Large sessions make _malloc
+  // grow WASM memory, which detaches that old view. Read HEAPU8 after each
+  // allocation so full-length songs can be copied safely.
+  const wasm = bzip2.wasmModule;
+  const capacity = source.length + Math.ceil(source.length / 100) + 601;
+  let sourcePtr = 0, destPtr = 0, lengthPtr = 0;
+  try {
+    sourcePtr = wasm._malloc(source.length);
+    if (!sourcePtr) throw new Error('หน่วยความจำไม่พอสำหรับไฟล์วิเคราะห์');
+    wasm.HEAPU8.set(source, sourcePtr);
+    destPtr = wasm._malloc(capacity);
+    lengthPtr = wasm._malloc(4);
+    if (!destPtr || !lengthPtr) throw new Error('หน่วยความจำไม่พอสำหรับบีบอัดไฟล์');
+    wasm.setValue(lengthPtr, capacity, 'i32');
+    const code = wasm._BZ2_bzBuffToBuffCompress(destPtr, lengthPtr, sourcePtr, source.length, 9, 0, 30);
+    if (code !== 0) throw new Error(`บีบอัดไฟล์ไม่สำเร็จ (รหัส ${code})`);
+    const length = wasm.getValue(lengthPtr, 'i32');
+    return wasm.HEAPU8.slice(destPtr, destPtr + length);
+  } finally {
+    if (sourcePtr) wasm._free(sourcePtr);
+    if (destPtr) wasm._free(destPtr);
+    if (lengthPtr) wasm._free(lengthPtr);
+  }
+}
+
 self.onmessage = async ({data}) => {
   try {
     if(data.sampleRate!==RATE) throw new Error(`เบราว์เซอร์ถอดรหัสเป็น ${data.sampleRate} Hz แทน 44100 Hz กรุณาใช้ Chrome หรือ Edge รุ่นใหม่`);
@@ -57,7 +83,7 @@ self.onmessage = async ({data}) => {
     chunks.length=0;
     self.postMessage({type:'progress',value:.94,message:'กำลังบีบอัดไฟล์ .sv…'});
     const bzip2=new BZip2(); await bzip2.init();
-    const bytes=bzip2.compress(xml,9,xml.length);
+    const bytes=compressSession(bzip2,xml);
     self.postMessage({type:'done',bytes:bytes.buffer,preview:preview.buffer,previewWidth,previewHeight},[bytes.buffer,preview.buffer]);
   } catch(error) {
     self.postMessage({type:'error',message:error?.message||String(error)});
