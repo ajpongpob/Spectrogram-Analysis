@@ -73,7 +73,7 @@ async function analyse(file) {
     if (data.type === 'done') {
       const blob = new Blob([data.bytes], { type: 'application/x-sonicvisualiser' });
       downloadUrl = URL.createObjectURL(blob);
-      outputName = `${file.name.replace(/\.[^.]+$/, '')}-Musical-Detail.sv`;
+      outputName = `${file.name.replace(/\.[^.]+$/, '')}-Musical-Detail-v2.sv`;
       setProgress(100, 'วิเคราะห์และบีบอัดเสร็จแล้ว');
       drawPreview(new Uint8Array(data.preview), data.previewWidth, data.previewHeight);
       result.hidden = false;
