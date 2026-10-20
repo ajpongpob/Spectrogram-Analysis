@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:pitch": "node tests/pitch-calibration.mjs"
+    "test:pitch": "node tests/pitch-calibration.mjs && node tests/axis-labels.mjs"
   },
   "dependencies": {
     "@digitaldefiance/bzip2-wasm": "^1.1.1"

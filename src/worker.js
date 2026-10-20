@@ -1,6 +1,6 @@
 import ShowCQT from './showcqt/showcqt-main.mjs';
 import BZip2 from '@digitaldefiance/bzip2-wasm';
-import { binFrequency, noteName, highFrequencyBlend, displayIntensity } from './pitch-axis.mjs';
+import { binFrequency, binAxisLabel, highFrequencyBlend, displayIntensity } from './pitch-axis.mjs';
 
 const RATE = 44100, WIDTH = 960, FPS = 60, HOP = 735;
 const encoder = new TextEncoder();
@@ -10,7 +10,7 @@ function notesAndBlend() {
   const notes=[], blend=new Float32Array(WIDTH);
   for(let k=0;k<WIDTH;k++) {
     const hz=binFrequency(k,WIDTH);
-    notes.push(noteName(hz));
+    notes.push(binAxisLabel(k, WIDTH));
     blend[k]=highFrequencyBlend(hz);
   }
   return {notes,blend};
@@ -57,7 +57,7 @@ self.onmessage = async ({data}) => {
     const fft=cqt.fft_size, anchor=fft-Math.ceil(RATE*.033), {notes,blend}=notesAndBlend();
     const vals=new Float32Array(WIDTH);
     const previewWidth=960,previewHeight=320,preview=new Uint8Array(previewWidth*previewHeight);
-    const title='ShowCQT Musical Detail v2 - pitch-aligned display intensity, not dB';
+    const title='ShowCQT Musical Detail v2.1 - axis labels refer to UPPER tick - display intensity, not dB';
     const audioName=escapeXml(data.fileName);
     const start=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE sonic-visualiser><sv><data><model id="0" name="Original audio" sampleRate="${RATE}" start="0" end="${total}" type="wavefile" file="${audioName}" mainModel="true"/><model id="1" name="${title}" sampleRate="${RATE}" type="dense" dimensions="3" windowSize="${HOP}" yBinCount="${WIDTH}" minimum="0" maximum="1" dataset="1" startFrame="0"/><dataset id="1" dimensions="3" separator=" ">${notes.map((n,k)=>`<bin number="${k}" name="${n}"/>`).join('')}`;
     const end=`</dataset><layer id="2" type="timeruler" name="Time" model="0" colourName="White" colour="#ffffff" darkBackground="true"/><layer id="3" type="colour3dplot" name="${title}" model="1" scale="0" minY="0" maxY="0" invertVertical="false" opaque="true" binScale="0" smooth="true" gain="1" colourMap="Magma" colourScheme="1" columnNormalization="none" normalizeColumns="false" normalizeVisibleArea="false"/></data><display><window width="1100" height="850"/><view centre="${Math.round(Math.min(19,total/RATE/2)*RATE)}" zoom="512" deepZoom="1" followPan="1" followZoom="1" tracking="page" type="pane" centreLineVisible="1" height="700"><layer id="2" type="timeruler" name="Time" model="0" visible="true"/><layer id="3" type="colour3dplot" name="${title}" model="1" visible="true"/></view></display><selections/></sv>`;

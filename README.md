@@ -1,7 +1,7 @@
 # ShowCQT Musical Detail Web
 
 Static, client-side web application for converting MP3/WAV files into portable
-Sonic Visualiser `.sv` sessions containing the Musical Detail v2
+Sonic Visualiser `.sv` sessions containing the Musical Detail v2.1
 ShowCQT display.
 
 ## Pitch alignment
@@ -9,15 +9,24 @@ ShowCQT display.
 - Each of the 960 bins spans 10 octaves, from about 20 Hz to 20.5 kHz.
   Its displayed centre frequency follows the ShowCQT kernel, including the
   half-bin offset caused by averaging pairs of supersampled kernels.
-- Note labels use the nearest 12-tone equal-tempered pitch with A4 = 440 Hz.
-  This labels *frequency bins*, not automatically transcribed musical notes;
+- Axis labels use the nearest 12-tone equal-tempered pitch with A4 = 440 Hz,
+  plus the cent offset. The arrow ↑ refers to the **upper tick** of the labelled
+  interval, not the text's vertical centre. Sonic Visualiser merges scale cells
+  when space is tight and otherwise centres the last bin's name below its tick,
+  causing apparently shifted pitches. Explicit edge labels remain meaningful
+  when the number of skipped cells changes. These label *axis frequencies*, not
+  automatically transcribed musical notes;
   overtones and simultaneous instruments may appear at other note positions.
 - Display brightness now uses a strictly increasing soft compression instead
   of hard clipping and peak darkening. This keeps the brightest point of loud
   tones at the correct frequency bin across the full register. Run
   `pnpm test:pitch` to verify 120 semitones at five input levels.
 - Sessions generated with v1 keep their earlier rendering. Analyse the audio
-  again to obtain the v2 pitch-aligned output.
+  again to obtain the current output. v2 sessions also need regeneration for
+  the v2.1 upper-tick labels; analysis intensities are unchanged from v2.
+- The pure-tone test checks data peaks, not host label placement. v2.1 was also
+  checked through native Sonic Visualiser PNG/SVG exports of G4, G#4 and A4
+  at full range and at a one-octave vertical zoom.
 
 ## Privacy and output
 
