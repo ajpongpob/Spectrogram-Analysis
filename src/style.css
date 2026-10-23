@@ -20,3 +20,11 @@
 .project-info .reference-list{list-style:none;padding-left:0}
 .reference-list li{padding-left:24px;text-indent:-24px;margin:22px 0}
 @media(max-width:720px){.project-info{padding:22px 18px}.analysis-specs>div{grid-template-columns:1fr;gap:2px}.project-info blockquote{padding:14px 16px}}
+[hidden] { display: none !important; }
+#viewer-host { margin: 24px -3vw; }
+#viewer-host iframe { width: 100%; height: 1300px; border: 1px solid #41394f; border-radius: 16px; background: #0c0b12; }
+#file-name { overflow-wrap: anywhere; }
+.masthead { display: block; }
+.shell { width: min(1500px, calc(100% - 48px)); }
+#job { padding: 24px; }
+#viewer-host { margin: 24px 0; }

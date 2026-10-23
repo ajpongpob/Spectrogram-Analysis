@@ -1,0 +1,34 @@
+import {chromium} from 'playwright-core';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const wav=process.env.WAV_FIXTURE,mp3=process.env.MP3_FIXTURE;
+assert(wav&&mp3,'Set WAV_FIXTURE to a G4/G#4/A4 calibration WAV and MP3_FIXTURE to the Rosanna reference MP3');
+await fs.mkdir('test-results',{recursive:true});
+const base=process.env.TEST_URL||'http://127.0.0.1:8954/';
+const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+try{
+ const context=await browser.newContext({viewport:{width:1600,height:1200},permissions:['clipboard-read','clipboard-write']});
+ const page=await context.newPage(),errors=[],posts=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.method()==='POST')posts.push(r.url())});
+ await page.goto(base);await page.locator('#file-input').setInputFiles(wav);
+ await page.waitForFunction(()=>document.querySelector('#percent').textContent==='100%',{timeout:60000});
+ let viewer=page.frames().find(f=>f.url().endsWith('/viewer.html'));
+ const peaks=await viewer.evaluate(()=>[1,3,5].map(sec=>{let best=0;for(let b=1;b<960;b++)if(viewerTest.sample(sec*60,b)>viewerTest.sample(sec*60,best))best=b;return viewerTest.note(Math.round(viewerTest.binPitch(best)))}));
+ assert.deepEqual(peaks,['G4','G#4','A4']);
+ await viewer.locator('#timeIn').focus();await page.keyboard.press('Space');await viewer.waitForFunction(()=>!document.querySelector('audio').paused);await page.keyboard.press('Space');
+ await viewer.locator('#palette').selectOption('viridis');await viewer.locator('#timeFormat').selectOption('clock');
+ await page.locator('#change-file').click();
+ const started=Date.now();await page.locator('#file-input').setInputFiles(mp3);
+ await page.waitForFunction(()=>document.querySelector('#percent').textContent==='100%',{timeout:180000});
+ viewer=page.frames().find(f=>f.url().endsWith('/viewer.html'));
+ const state=await viewer.evaluate(()=>viewerTest.state);assert(state.rows>19000);assert(state.ready);
+ await viewer.locator('#audio').evaluate(a=>{a.currentTime=15});await viewer.locator('#range').selectOption('24,60');
+ const g=await viewer.evaluate(()=>{let best=100;for(let b=100;b<150;b++)if(viewerTest.sample(900,b)>viewerTest.sample(900,best))best=b;return viewerTest.note(Math.round(viewerTest.binPitch(best)))});assert.equal(g,'G1');
+ await viewer.locator('#tool').selectOption('rect');const plot=await viewer.locator('#plot').boundingBox();await page.mouse.move(plot.x+300,plot.y+200);await page.mouse.down();await page.mouse.move(plot.x+700,plot.y+450,{steps:8});await page.mouse.up();assert.equal(await viewer.evaluate(()=>viewerTest.state.annotations),1);
+ await viewer.locator('#capture').click();const b=await viewer.locator('#plot').boundingBox();await page.mouse.move(b.x+150,b.y+50);await page.mouse.down();await page.mouse.move(b.x+750,b.y+450,{steps:8});await page.mouse.up();await viewer.waitForFunction(()=>!document.querySelector('#copyPNG').disabled);
+ await viewer.locator('#copyPNG').click();await viewer.waitForFunction(()=>document.querySelector('#captureInfo').textContent.startsWith('คัดลอก PNG'));
+ await page.screenshot({path:'test-results/web-ready.png',fullPage:true});
+ await page.locator('#change-file').click();await page.locator('#file-input').setInputFiles({name:'bad.wav',mimeType:'audio/wav',buffer:Buffer.from('invalid')});await page.locator('#error').waitFor({state:'visible'});
+ await page.locator('#change-file').click();await page.locator('#file-input').setInputFiles(mp3);await page.locator('#cancel').click();assert(await page.locator('#drop-zone').isVisible());
+ assert.deepEqual(errors,[]);assert.deepEqual(posts,[]);
+ const result={url:base,syntheticWav:peaks,fullSongFrames:state.rows,fullSongBass:g,fullSongSeconds:(Date.now()-started)/1000,playPause:true,annotations:true,clipboard:true,invalidFileRecovery:true,cancel:true,audioUploadRequests:posts,errors};await fs.writeFile('test-results/web-validation.json',JSON.stringify(result,null,2));console.log(result);
+}finally{await browser.close()}
