@@ -1,11 +1,12 @@
 'use strict';
+import {referenceRGB,legacyIntensity} from './reference-color.mjs';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
 const LEFT=108,TOP=12,BOTTOM=30,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const hz=m=>440*2**((m-69)/12),note=m=>names[((m%12)+12)%12]+(Math.floor(m/12)-1);
 const binPitch=b=>15.5+(b+.5)/8,pitchBin=m=>(m-15.5)*8-.5;
-let samples,start=10,span=10,lo=15.5,hi=135.5,W=1000,H=700,dirty=true,lastPlay=-1,drag=null,modeName='pan';
+let samples,peaks,rawEncoding=false,start=10,span=10,lo=15.5,hi=135.5,W=1000,H=700,dirty=true,lastPlay=-1,drag=null,modeName='pan';
 const cached=document.createElement('canvas');
 const view=()=>({start,span,lo,hi});
 const yAt=(m,v,h)=>TOP+(v.hi-m)/(v.hi-v.lo)*(h-TOP-BOTTOM);
@@ -14,13 +15,14 @@ const xAt=(t,v,w)=>LEFT+(t-v.start)/v.span*(w-LEFT);
 const tAt=(x,v,w)=>v.start+(x-LEFT)/(w-LEFT)*v.span;
 const yForPitch=m=>yAt(m,view(),H),pitchForY=y=>pAt(y,view(),H);
 const palettes={magma:[[0,0,4],[81,18,124],[183,55,121],[252,137,97],[252,253,191]],inferno:[[0,0,4],[87,16,110],[188,55,84],[249,142,9],[252,255,164]],viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],gray:[[0,0,0],[64,64,64],[128,128,128],[192,192,192],[255,255,255]]};
-const gainLabel=document.createElement('label');gainLabel.innerHTML='ความสว่าง <select id="gain"><option value="1">1×</option><option value="2" selected>2×</option><option value="3">3×</option></select>';document.querySelector('.tools').append(gainLabel);
-function style(){return {axis:$('axis').value,clock:$('timeFormat').value==='clock',palette:$('palette').value,gain:+$('gain').value,noteGrid:$('noteGrid').checked,timeGrid:$('timeGrid').checked}}
-function colorLut(s){const stops=palettes[s.palette];return Array.from({length:4096},(_,i)=>{const v=Math.min(1,i/4095*s.gain)*4,j=Math.min(3,Math.floor(v)),f=v-j;return stops[j].map((a,c)=>Math.round(a*(1-f)+stops[j+1][c]*f))})}
+const gainLabel=document.createElement('label');gainLabel.innerHTML='ความสว่าง (linear) <input id="gain" type="range" min="0" max="3" step="0.01" value="1" aria-label="ความสว่างแบบเชิงเส้น"><output id="gainValue" for="gain">1.00×</output>';document.querySelector('.tools').append(gainLabel);
+const gainNumber=document.createElement('input');gainNumber.type='number';gainNumber.id='gainNumber';gainNumber.min='0';gainNumber.max='3';gainNumber.step='0.01';gainNumber.value='1';gainNumber.setAttribute('aria-label','ระบุความสว่าง');gainNumber.style.width='75px';gainLabel.after(gainNumber);
+function style(){return {axis:$('axis').value,clock:$('timeFormat').value==='clock',palette:$('palette').value,gain:+$('gain').value,peak:$('peakEnhance').checked,noteGrid:$('noteGrid').checked,timeGrid:$('timeGrid').checked}}
+function colorLut(s){if(s.palette==='reference')return Array.from({length:4096},(_,i)=>referenceRGB(i/4095));const stops=palettes[s.palette];return Array.from({length:4096},(_,i)=>{const v=Math.min(1,i/4095*s.gain)*4,j=Math.min(3,Math.floor(v)),f=v-j;return stops[j].map((a,c)=>Math.round(a*(1-f)+stops[j+1][c]*f))})}
 function formatTime(sec,digits=2,clock=style().clock){const factor=10**digits,total=Math.round(Math.max(0,sec)*factor);if(!clock)return (total/factor).toFixed(digits)+'s';const mins=Math.floor(total/(60*factor)),rest=(total-mins*60*factor)/factor;return mins+':'+rest.toFixed(digits).padStart(digits?digits+3:2,'0')}
 function ticks(v,w){const target=v.span/Math.max(2,Math.floor((w-LEFT)/100)),p=10**Math.floor(Math.log10(target)),step=[1,2,5,10].map(n=>n*p).find(n=>n>=target),a=[];for(let i=Math.ceil(v.start/step);i*step<=v.start+v.span;i++)a.push(i*step);return {values:a,digits:Math.max(0,-Math.floor(Math.log10(step)))}}
 function bytes(s){const raw=atob(s),b=new Uint8Array(raw.length);for(let i=0;i<b.length;i++)b[i]=raw.charCodeAt(i);return b}
-function intensity(t,b){const t0=Math.floor(t),t1=Math.min(meta.rows-1,t0+1),b0=Math.floor(b),b1=Math.min(959,b0+1),x=t-t0,y=b-b0;return (samples[t0*960+b0]*(1-y)+samples[t0*960+b1]*y)*(1-x)+(samples[t1*960+b0]*(1-y)+samples[t1*960+b1]*y)*x}
+function intensity(t,b,data=samples){const t0=Math.floor(t),t1=Math.min(meta.rows-1,t0+1),b0=Math.floor(b),b1=Math.min(959,b0+1),x=t-t0,y=b-b0;return (data[t0*960+b0]*(1-y)+data[t0*960+b1]*y)*(1-x)+(data[t1*960+b0]*(1-y)+data[t1*960+b1]*y)*x}
 
 let annotations=[],undoStack=[],redoStack=[];
 let storageKey='musical-detail:rosanna:960:19790:annotations:v1';
@@ -41,7 +43,7 @@ function drawScene(target,v,s,list,w,h,scale=1,crop=null){
  const ax=Math.max(LEFT,area.x),ay=Math.max(TOP,area.y),bx=Math.min(w,area.x+area.w),by=Math.min(h-BOTTOM,area.y+area.h);
  const rw=Math.max(0,Math.round((bx-ax)*scale)),rh=Math.max(0,Math.round((by-ay)*scale));
  if(rw&&rh){const im=g.createImageData(rw,rh),bins=Float64Array.from({length:rh},(_,y)=>clamp(pitchBin(pAt(ay+(y+.5)/scale,v,h)),0,959));
-  for(let x=0;x<rw;x++){const sec=tAt(ax+(x+.5)/scale,v,w),t=clamp(sec*60,0,meta.rows-1);for(let y=0;y<rh;y++){const val=sec<0||sec>meta.duration?0:intensity(t,bins[y]),col=lut[clamp(Math.round(val*4095),0,4095)],p=(y*rw+x)*4;im.data[p]=col[0];im.data[p+1]=col[1];im.data[p+2]=col[2];im.data[p+3]=255}}
+  for(let x=0;x<rw;x++){const sec=tAt(ax+(x+.5)/scale,v,w),t=clamp(sec*60,0,meta.rows-1);for(let y=0;y<rh;y++){const valid=sec>=0&&sec<=meta.duration,raw=valid?intensity(t,bins[y]):0,ref=s.palette==='reference',val=ref?raw*s.gain:(rawEncoding?legacyIntensity(raw,bins[y]):raw),col=lut[clamp(Math.round(val*4095),0,4095)],p=(y*rw+x)*4,a=valid&&ref&&s.peak&&peaks?intensity(t,bins[y],peaks)/255:0;im.data[p]=col[0]*(1-.6*a);im.data[p+1]=col[1]*(1-.8*a);im.data[p+2]=col[2]*(1-.2*a);im.data[p+3]=255}}
   g.putImageData(im,Math.round((ax-area.x)*scale),Math.round((ay-area.y)*scale));
  }
  g.scale(scale,scale);g.translate(-area.x,-area.y);
@@ -71,7 +73,9 @@ function manual(){$('follow').checked=false}
 function zoomTime(factor,anchor=clamp(audio.currentTime,start,start+span)){manual();const ratio=(anchor-start)/span,length=clamp(span*factor,.25,meta.duration);setTime(anchor-ratio*length,length);syncZoom()}
 function zoomPitch(factor,anchor=(lo+hi)/2){manual();const ratio=(anchor-lo)/(hi-lo),range=clamp((hi-lo)*factor,3,120);setPitch(anchor-ratio*range,range);syncZoom()}
 for(const [id,fn] of Object.entries({timeIn:()=>zoomTime(.5),timeOut:()=>zoomTime(2),pitchIn:()=>zoomPitch(.5),pitchOut:()=>zoomPitch(2),fit:()=>{manual();setTime(0,meta.duration);setPitch(15.5,120);syncZoom()},reset:()=>{setPitch(15.5,120);span=10;position(audio.currentTime)}}))$(id).onclick=fn;
-for(const id of ['axis','gain','palette','noteGrid','timeGrid'])$(id).onchange=changed;
+for(const id of ['axis','palette','peakEnhance','noteGrid','timeGrid'])$(id).onchange=changed;
+function updateGain(value,syncNumber=true){if(!Number.isFinite(value))return;const n=Math.round(clamp(value,0,3)*100)/100;$('gain').value=n;if(syncNumber)gainNumber.value=n.toFixed(2);$('gainValue').value=n.toFixed(2)+'×';changed()}
+$('gain').oninput=()=>updateGain(+$('gain').value);gainNumber.oninput=()=>{if(gainNumber.value!=='')updateGain(gainNumber.valueAsNumber,false)};gainNumber.onchange=()=>updateGain(gainNumber.value===''?1:gainNumber.valueAsNumber);
 $('timeFormat').onchange=syncZoom;
 $('span').onchange=()=>{const s=+$('span').value;setTime(audio.currentTime-s*.25,s);syncZoom()};
 $('range').onchange=()=>{const [a,b]=$('range').value.split(',').map(Number);setPitch(a,b-a);syncZoom()};
@@ -111,7 +115,7 @@ async function init(){try{const packed=bytes(meta.data);meta.data='';const buf=a
 function tick(){let moved=false;if(!audio.paused&&Math.abs(audio.currentTime-lastPlay)>.04){if($('follow').checked&&(audio.currentTime>start+span*.85||audio.currentTime<start))position(audio.currentTime);$('seek').value=audio.currentTime;lastPlay=audio.currentTime;moved=true}if(dirty)render();else if(moved)overlay();requestAnimationFrame(tick)}
 window.viewerTest={binPitch,pitchBin,hz,note,yForPitch,pitchForY,formatTime,get state(){return {...view(),rows:meta.rows,ready:!!samples,annotations:annotations.length}},sample:(frame,bin)=>samples[frame*960+bin]};
 syncZoom();if(payload){loadInk();init()}else{
- window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);if(samples.length!==meta.rows*960)throw Error('ข้อมูลวิเคราะห์ไม่ครบ');storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · Musical Detail';$('status').textContent='พร้อมใช้งาน';syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
+ window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error('ข้อมูลยอดเสียงไม่ครบ');if(samples.length!==meta.rows*960)throw Error('ข้อมูลวิเคราะห์ไม่ครบ');storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · Musical Detail';$('status').textContent='พร้อมใช้งาน';syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
  new ResizeObserver(()=>parent.postMessage({type:'viewer-height',height:document.body.scrollHeight},location.origin)).observe(document.body);
  parent.postMessage({type:'viewer-listening'},location.origin);
 }

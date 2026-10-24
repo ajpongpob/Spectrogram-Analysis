@@ -20,6 +20,9 @@ for (const amplitude of amplitudes) {
       cqt.inputs[1][sample] = value;
     }
     cqt.calc();
+    let rawPeak=0;
+    for(let bin=1;bin<width;bin++)if(cqt.color[4*bin+1]>cqt.color[4*rawPeak+1])rawPeak=bin;
+    assert.equal(nearestMidi(binFrequency(rawPeak,width)),midi,'Raw reference CQT pitch');
     let brightestBin = 0;
     let brightestValue = -1;
     for (let bin = 0; bin < width; bin++) {
