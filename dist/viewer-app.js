@@ -1,6 +1,6 @@
 'use strict';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=lab-popup-1';
+import {createSurface} from './surface-3d.mjs?v=lab-annotations-2';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
 const LEFT=108,TOP=12,BOTTOM=30,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -27,14 +27,45 @@ function intensity(t,b,data=samples){const t0=Math.floor(t),t1=Math.min(meta.row
 
 let annotations=[],undoStack=[],redoStack=[];
 let storageKey='musical-detail:rosanna:960:19790:annotations:v1';
-function loadInk(){try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(saved))annotations=saved.filter(a=>['rect','line','highlight'].includes(a.type)&&/^#[0-9a-f]{6}$/i.test(a.color)&&Number.isFinite(a.width)&&a.width>0&&Array.isArray(a.points)&&a.points.length>=2&&a.points.every(p=>Number.isFinite(p.t)&&Number.isFinite(p.m)))}catch{}annotationControls()}
+function loadInk(){
+ try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(saved))annotations=saved.filter(a=>{
+  if(!a||!['rect','line','highlight','text'].includes(a.type)||!/^#[0-9a-f]{6}$/i.test(a.color)||!Array.isArray(a.points)||!a.points.every(p=>p&&Number.isFinite(p.t)&&Number.isFinite(p.m)))return false;
+  if(a.type==='text')return a.points.length===1&&typeof a.text==='string'&&a.text.trim().length>0&&a.text.length<=240&&Number.isFinite(a.fontSize)&&a.fontSize>=8&&a.fontSize<=96;
+  return Number.isFinite(a.width)&&a.width>0&&a.points.length>=2;
+ })}catch{}annotationControls();
+}
 function annotationControls(){for(const [id,enabled] of [['undo',undoStack.length],['redo',redoStack.length],['clearInk',annotations.length]])$(id).disabled=!enabled}
 function saveInk(){try{localStorage.setItem(storageKey,JSON.stringify(annotations));$('annotationInfo').textContent=`บันทึกในเบราว์เซอร์นี้แล้ว · ${annotations.length} รายการ`}catch{$('annotationInfo').textContent='เบราว์เซอร์บันทึกสิ่งที่วาดไม่ได้ กรุณาคัดลอกหรือดาวน์โหลด PNG ก่อนปิด'}annotationControls()}
 function editInk(next){undoStack.push(annotations);redoStack=[];annotations=next;saveInk();changed()}
 $('undo').onclick=()=>{if(undoStack.length){redoStack.push(annotations);annotations=undoStack.pop();saveInk();changed()}};
 $('redo').onclick=()=>{if(redoStack.length){undoStack.push(annotations);annotations=redoStack.pop();saveInk();changed()}};
 $('clearInk').onclick=()=>editInk([]);annotationControls();
-function drawInk(g,v,w,h,list){g.save();g.beginPath();g.rect(LEFT,TOP,w-LEFT,h-TOP-BOTTOM);g.clip();for(const a of list){g.save();g.strokeStyle=a.color;g.lineWidth=a.type==='highlight'?a.width*6:a.width;g.lineCap='round';g.lineJoin='round';g.globalAlpha=a.type==='highlight'?.3:1;const p=a.points.map(p=>({x:xAt(p.t,v,w),y:yAt(p.m,v,h)}));g.beginPath();if(a.type==='rect')g.rect(p[0].x,p[0].y,p[1].x-p[0].x,p[1].y-p[0].y);else{g.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)g.lineTo(p[i].x,p[i].y)}g.stroke();g.restore()}g.restore()}
+function drawInk(g,v,w,h,list){
+ g.save();g.beginPath();g.rect(LEFT,TOP,w-LEFT,h-TOP-BOTTOM);g.clip();
+ for(const a of list){
+  g.save();const p=a.points.map(p=>({x:xAt(p.t,v,w),y:yAt(p.m,v,h)}));
+  if(a.type==='text'){
+   g.fillStyle=a.color;g.font=`${a.fontSize}px system-ui, sans-serif`;g.textAlign='left';g.textBaseline='top';
+   a.text.split('\n').forEach((line,i)=>g.fillText(line,p[0].x,p[0].y+i*a.fontSize*1.45));
+  }else{
+   // Older saved highlights used a sixfold width multiplier.
+   g.strokeStyle=a.color;g.lineWidth=a.type==='highlight'&&!a.strokePixels?a.width*6:a.width;
+   g.lineCap='round';g.lineJoin='round';g.globalAlpha=a.type==='highlight'?.3:1;g.beginPath();
+   if(a.type==='rect')g.rect(p[0].x,p[0].y,p[1].x-p[0].x,p[1].y-p[0].y);
+   else{g.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)g.lineTo(p[i].x,p[i].y)}g.stroke();
+  }
+  g.restore();
+ }
+ g.restore();
+}
+function setPenWidth(value){
+ const n=Math.round(clamp(Number.isFinite(value)?value:4,.25,48)*4)/4;
+ $('penWidth').value=n;$('penWidthNumber').value=n;
+}
+$('penWidth').oninput=()=>setPenWidth(+$('penWidth').value);
+$('penWidthNumber').oninput=()=>{if($('penWidthNumber').value!=='')$('penWidth').value=clamp($('penWidthNumber').valueAsNumber,.25,48)};
+$('penWidthNumber').onchange=()=>setPenWidth($('penWidthNumber').valueAsNumber);
+$('textSize').onchange=()=>{$('textSize').value=Math.round(clamp($('textSize').valueAsNumber||20,8,96))};
 
 // Render from analysis values at the requested resolution; PNG export uses
 // the same mapping as the screen and does not enlarge a screenshot bitmap.
@@ -81,18 +112,25 @@ $('timeFormat').onchange=syncZoom;
 $('span').onchange=()=>{const s=+$('span').value;setTime(audio.currentTime-s*.25,s);syncZoom()};
 $('range').onchange=()=>{const [a,b]=$('range').value.split(',').map(Number);setPitch(a,b-a);syncZoom()};
 $('seek').max=meta.duration;$('seek').oninput=()=>{audio.currentTime=+$('seek').value;position(audio.currentTime)};
-function setMode(name){modeName=name;for(const [id,m] of [['boxZoom','zoom'],['capture','capture']]){$(id).setAttribute('aria-pressed',String(name===m));$(id).style.background=name===m?'#6b3da0':''}if(['pan','rect','line','highlight'].includes(name))$('tool').value=name;canvas.style.cursor=name==='pan'?'grab':'crosshair';drag=null;overlay()}
+function setMode(name){
+ modeName=name;for(const [id,m] of [['boxZoom','zoom'],['capture','capture']]){$(id).setAttribute('aria-pressed',String(name===m));$(id).style.background=name===m?'#1d1d1f':'';$(id).style.color=name===m?'#fff':''}
+ if(['pan','rect','line','highlight','text'].includes(name))$('tool').value=name;
+ $('textSettings').hidden=name!=='text';$('strokeSettings').hidden=name==='text';
+ $('toolHint').textContent=name==='text'?'พิมพ์ข้อความ แล้วคลิกบนภาพเพื่อวาง · ขึ้นบรรทัดใหม่ได้':name==='pan'?'ลากเพื่อเลื่อนภาพ · คลิกเพื่อเลือกเวลา':'ลากบนภาพเพื่อเขียนกำกับ · ปรับขนาดได้ทีละ 0.25 px';
+ canvas.style.cursor=name==='pan'?'grab':name==='text'?'text':'crosshair';drag=null;overlay();
+}
 $('tool').onchange=()=>setMode($('tool').value);$('boxZoom').onclick=()=>setMode(modeName==='zoom'?'pan':'zoom');$('capture').onclick=()=>{manual();audio.pause();setMode(modeName==='capture'?'pan':'capture')};
 function point(e,full=false){const r=canvas.getBoundingClientRect();return {x:clamp((e.clientX-r.left)*W/r.width,full?0:LEFT,W),y:clamp((e.clientY-r.top)*H/r.height,full?0:TOP,full?H:H-BOTTOM)}}
 function dataPoint(p,v){return {t:tAt(p.x,v,W),m:pAt(p.y,v,H)}}
-function draft(d){const pts=d.mode==='highlight'?d.points:[dataPoint({x:d.x,y:d.y},d.view),dataPoint({x:d.endX,y:d.endY},d.view)];return {type:d.mode,color:d.color,width:d.width,points:pts}}
-canvas.onpointerdown=e=>{if(!samples||e.button!==0||drag)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(modeName!=='capture'&&(x<LEFT||y<TOP||y>H-BOTTOM))return;const p=point(e,modeName==='capture');if(modeName!=='pan'){manual();audio.pause()}invalidateCapture();drag={...p,endX:p.x,endY:p.y,view:view(),mode:modeName,moved:false,color:$('ink').value,width:+$('penWidth').value,points:[dataPoint(p,view())]};canvas.setPointerCapture(e.pointerId)};
+function draft(d){const pts=d.mode==='highlight'?d.points:[dataPoint({x:d.x,y:d.y},d.view),dataPoint({x:d.endX,y:d.endY},d.view)];return {type:d.mode,color:d.color,width:d.width,strokePixels:true,points:pts}}
+canvas.onpointerdown=e=>{if(!samples||e.button!==0||drag)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(modeName!=='capture'&&(x<LEFT||y<TOP||y>H-BOTTOM))return;const p=point(e,modeName==='capture');if(modeName==='text'&&!$('annotationText').value.trim()){$('toolHint').textContent='พิมพ์ข้อความก่อน แล้วคลิกตำแหน่งที่ต้องการบนภาพ';$('annotationText').focus();return}if(modeName!=='pan'){manual();audio.pause()}invalidateCapture();drag={...p,endX:p.x,endY:p.y,view:view(),mode:modeName,moved:false,color:$('ink').value,width:+$('penWidth').value,text:$('annotationText').value.trim().slice(0,240),fontSize:Math.round(clamp($('textSize').valueAsNumber||20,8,96)),points:[dataPoint(p,view())]};canvas.setPointerCapture(e.pointerId)};
 canvas.onpointermove=e=>{const p=point(e,drag?.mode==='capture');if(!drag){if(p.x>LEFT)$('readout').textContent=`เวลา ${formatTime(tAt(p.x,view(),W))} · ${hz(pAt(p.y,view(),H)).toFixed(2)} Hz · โน้ตใกล้ที่สุด ${note(Math.round(pAt(p.y,view(),H)))}`;return}
  const d=drag,dx=p.x-d.x,dy=p.y-d.y;d.endX=p.x;d.endY=p.y;if(Math.hypot(dx,dy)>3)d.moved=true;if(!d.moved)return;manual();if(d.mode==='pan'){setTime(d.view.start-dx/(W-LEFT)*d.view.span,d.view.span);setPitch(d.view.lo+dy/(H-TOP-BOTTOM)*(d.view.hi-d.view.lo),d.view.hi-d.view.lo);syncZoom()}else{if(d.mode==='highlight')d.points.push(dataPoint(p,d.view));if(dirty)render();else overlay()}};
 canvas.onpointerup=e=>{if(!drag)return;const d=drag;drag=null;canvas.releasePointerCapture(e.pointerId);const area={x:Math.min(d.x,d.endX),y:Math.min(d.y,d.endY),w:Math.abs(d.endX-d.x),h:Math.abs(d.endY-d.y)};
  if(d.moved&&d.mode==='capture'&&area.w>=8&&area.h>=8){setMode('pan');prepareCapture(area);return}
  if(d.moved&&d.mode==='zoom'&&area.w>8&&area.h>8){const lower=pAt(area.y+area.h,d.view,H),upper=pAt(area.y,d.view,H);setTime(tAt(area.x,d.view,W),area.w/(W-LEFT)*d.view.span);setPitch(lower,upper-lower);setMode('pan');syncZoom()}
  else if(d.moved&&['rect','line','highlight'].includes(d.mode)){editInk([...annotations,draft(d)])}
+ else if(!d.moved&&d.mode==='text'){editInk([...annotations,{type:'text',color:d.color,text:d.text,fontSize:d.fontSize,points:[dataPoint({x:d.x,y:d.y},d.view)]}])}
  else if(!d.moved&&d.mode==='pan'){audio.currentTime=clamp(tAt(d.x,view(),W),0,meta.duration)}
  dirty=true;
 };
@@ -107,7 +145,7 @@ async function prepareCapture(area){const token=++captureToken,snapshot={area,vi
 $('exportScale').onchange=()=>{if(captureState)prepareCapture(captureState.area)};
 $('copyPNG').onclick=async()=>{const selected=captureState;if(!selected?.blob)return;try{if(!navigator.clipboard?.write||!window.ClipboardItem)throw Error('เบราว์เซอร์นี้ไม่รองรับการคัดลอกภาพ');await navigator.clipboard.write([new ClipboardItem({'image/png':selected.blob})]);$('captureInfo').textContent=`คัดลอก PNG ${selected.width} × ${selected.height} px แล้ว — วางด้วย Ctrl/⌘ + V`}catch(e){$('captureInfo').textContent='คัดลอกไม่ได้ กรุณาอนุญาตคลิปบอร์ด หรือกดดาวน์โหลด PNG'}};
 $('downloadPNG').onclick=()=>{if(!captureState?.blob)return;const url=URL.createObjectURL(captureState.blob),a=document.createElement('a');a.href=url;a.download=(sourceName.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N}._-]+/gu,'-')||'spectrogram')+'-spectrogram-selection.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)};
-function isPlaybackSpace(e){if((e.code!=='Space'&&e.key!==' ')||e.ctrlKey||e.metaKey||e.altKey||e.isComposing)return false;return !e.composedPath().some(el=>el instanceof HTMLElement&&(el.isContentEditable||el.matches('textarea,select,input:not([type=range]):not([type=checkbox]):not([type=button])')))}
+function isPlaybackSpace(e){if((e.code!=='Space'&&e.key!==' ')||e.ctrlKey||e.metaKey||e.altKey||e.isComposing)return false;return !e.composedPath().some(el=>el instanceof HTMLElement&&(el.isContentEditable||el.matches('.lab-rail-button,textarea,select,input:not([type=range]):not([type=checkbox]):not([type=button])')))}
 document.addEventListener('keydown',e=>{if(!isPlaybackSpace(e))return;e.preventDefault();e.stopPropagation();if(e.repeat||!samples||audio.readyState<1)return;if(audio.paused)audio.play().catch(()=>{$('status').textContent='กรุณากดปุ่มเล่นเสียงอีกครั้ง'});else audio.pause()},{capture:true});
 document.addEventListener('keyup',e=>{if(isPlaybackSpace(e)){e.preventDefault();e.stopPropagation()}},{capture:true});
 audio.addEventListener('seeked',()=>{$('seek').value=audio.currentTime;if($('follow').checked&&(audio.currentTime<start||audio.currentTime>start+span))position(audio.currentTime);overlay()});
@@ -116,7 +154,7 @@ async function init(){try{sourceName=document.querySelector('h1')?.textContent||
 function tick(){let moved=false;if(!audio.paused&&Math.abs(audio.currentTime-lastPlay)>.04){if($('follow').checked&&(audio.currentTime>start+span*.85||audio.currentTime<start))position(audio.currentTime);$('seek').value=audio.currentTime;lastPlay=audio.currentTime;moved=true}if(dirty)render();else if(moved)overlay();surface.frame();requestAnimationFrame(tick)}
 window.viewerTest={binPitch,pitchBin,hz,note,yForPitch,pitchForY,formatTime,get state(){return {...view(),rows:meta.rows,ready:!!samples,annotations:annotations.length}},sample:(frame,bin)=>samples[frame*960+bin]};
 const surface=createSurface(()=>samples&&rawEncoding?{samples,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
-/* Desktop: frequently used controls above; a category rail beside the spectrogram. */
+/* Desktop: common controls above; one persistent accordion section beside the plot. */
 function mountLabWorkbench(){
  const main=canvas.closest('main');
  const setHeight=()=>{let h=window.innerHeight;try{h=window.parent.innerHeight||h}catch{}document.documentElement.style.setProperty('--lab-screen-height',Math.max(550,h)+'px')};
@@ -130,12 +168,7 @@ function mountLabWorkbench(){
  const stage=document.createElement('section');stage.className='lab-stage';
  const aside=document.createElement('aside');aside.className='lab-sidebar';aside.setAttribute('aria-label','เครื่องมือข้างภาพ Spectrogram');
  const rail=document.createElement('nav');rail.className='lab-tool-rail';rail.setAttribute('aria-label','หมวดเครื่องมือปรับภาพ');
- const popup=document.createElement('div');popup.className='lab-popover';popup.setAttribute('role','region');popup.setAttribute('aria-label','ปรับค่าภาพ');popup.hidden=true;
- const head=document.createElement('div');head.className='lab-popover-head';
- const title=document.createElement('strong');title.className='lab-popover-title';
- const close=document.createElement('button');close.type='button';close.className='lab-popover-close';close.setAttribute('aria-label','ปิดแผงปรับแต่ง');close.textContent='×';
- head.append(title,close);popup.append(head);
- main.prepend(top);top.append(tabs,transport);top.after(grid);grid.append(stage,aside);aside.append(rail,popup);
+ main.prepend(top);top.append(tabs,transport);top.after(grid);grid.append(stage,aside);aside.append(rail);
  stage.append(panel3d,canvas,$('readout'),$('seek'),hint);
  const quick=document.createElement('div');quick.className='lab-quick-zoom';
  for(const [label,ids] of [['เวลา',['timeIn','timeOut']],['ระดับเสียง',['pitchIn','pitchOut']]]){
@@ -157,26 +190,30 @@ function mountLabWorkbench(){
   ['export','ส่งออก PNG','↓',[capture]],
   ['three','ปรับภาพ 3D','◇',controls3d]
  ];
- const buttons=new Map(),panels=new Map();let active=null;
+ const buttons=new Map(),panels=new Map(),sections=new Map();let active=null;
  function select(name){
-  active=name;popup.hidden=!name;
-  for(const [id,panel] of panels){const selected=id===name;panel.hidden=!selected;buttons.get(id).setAttribute('aria-expanded',String(selected));if(selected)title.textContent=specs.find(spec=>spec[0]===id)[1]}
+  active=name;
+  for(const [id,panel] of panels){const selected=id===name;panel.hidden=!selected;buttons.get(id).setAttribute('aria-expanded',String(selected))}
  }
  for(const [id,label,symbol,items] of specs){
+  const section=document.createElement('section');section.className='lab-tool-section';sections.set(id,section);
+  const heading=document.createElement('h2');heading.className='lab-rail-heading';
   const button=document.createElement('button');button.type='button';button.className='lab-rail-button';
-  button.id='lab-button-'+id;button.setAttribute('aria-controls','lab-panel-'+id);button.setAttribute('aria-expanded','false');button.setAttribute('aria-label',label);button.title=label;
+  button.id='lab-button-'+id;button.setAttribute('aria-controls','lab-panel-'+id);button.setAttribute('aria-expanded','false');button.setAttribute('aria-label',label);
   const icon=document.createElement('span');icon.className='lab-rail-symbol';icon.setAttribute('aria-hidden','true');icon.textContent=symbol;
   const name=document.createElement('span');name.className='lab-rail-label';name.textContent=label;
-  button.append(icon,name);rail.append(button);buttons.set(id,button);
-  const panel=document.createElement('section');panel.id='lab-panel-'+id;panel.className='lab-panel';panel.hidden=true;panel.setAttribute('aria-labelledby',button.id);
-  popup.append(panel);panels.set(id,panel);for(const item of items)panel.append(item);
-  button.addEventListener('click',()=>select(active===id?null:id));
+  button.append(icon,name);heading.append(button);section.append(heading);rail.append(section);buttons.set(id,button);
+  const panel=document.createElement('section');panel.id='lab-panel-'+id;panel.className='lab-panel';panel.hidden=true;panel.setAttribute('role','region');panel.setAttribute('aria-labelledby',button.id);
+  section.append(panel);panels.set(id,panel);for(const item of items)panel.append(item);
+  button.addEventListener('click',()=>select(id));
  }
- close.addEventListener('click',()=>{const old=active;select(null);buttons.get(old)?.focus()});
- document.addEventListener('pointerdown',e=>{if(active&&!aside.contains(e.target))select(null)});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){const old=active;select(null);buttons.get(old)?.focus()}});
- rail.addEventListener('keydown',e=>{if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;e.preventDefault();const visible=[...buttons].filter(([,b])=>!b.hidden).map(([k])=>k);if(!visible.length)return;const cur=visible.indexOf([...buttons].find(([,b])=>b===document.activeElement)?.[0]||visible[0]),i=e.key==='Home'?0:e.key==='End'?visible.length-1:(cur+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length;buttons.get(visible[i]).focus()});
- const sync=()=>{const is3d=!panel3d.hidden;for(const id of ['draw','export'])buttons.get(id).hidden=is3d;buttons.get('three').hidden=!is3d;if(active&&buttons.get(active).hidden)select(null)};
+ rail.addEventListener('keydown',e=>{
+  // Arrow keys inside fields keep their normal editing and slider behavior.
+  if(!e.target.matches('.lab-rail-button')||!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;
+  e.preventDefault();const visible=[...buttons].filter(([id])=>!sections.get(id).hidden).map(([,button])=>button);
+  const cur=visible.indexOf(e.target),i=e.key==='Home'?0:e.key==='End'?visible.length-1:(cur+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length;visible[i]?.focus();
+ });
+ const sync=()=>{const is3d=!panel3d.hidden;for(const id of ['draw','export'])sections.get(id).hidden=is3d;sections.get('three').hidden=!is3d;if(active&&sections.get(active).hidden)select(is3d?'three':'colors')};
  new MutationObserver(sync).observe(panel3d,{attributes:true,attributeFilter:['hidden']});sync();
 }
 mountLabWorkbench();
