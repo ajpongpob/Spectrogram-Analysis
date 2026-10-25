@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import {project,heightOf,meshIndices,meshSamples} from '../public/surface-math.mjs';
+import {project,heightOf,meshIndices,meshSamples,pickSurface} from '../public/surface-math.mjs';
+const triangle=[[-1,-1,0],[1,-1,.4],[0,1,.8]];
+const center=[0,-1/3,.4];
+for(const yaw of [0,45,90,180,270,325]){
+ const screen=project(center,yaw,55,7,1.5);
+ const hit=pickSurface(triangle,[0,1,2],screen,yaw,55,7,1.5);
+ assert(hit);hit.forEach((x,i)=>assert(Math.abs(x-center[i])<1e-6));
+}
+assert.equal(pickSurface(triangle,[0,1,2],[10,10],0,55,7,1.5),null);
+console.log('PASS: perspective-correct cursor picking at six camera angles and empty-space rejection');
 for(const p of [[-2,-1.5,-.6],[2,1.5,1.4],[0,0,0]])for(const angle of [0,90,180,270]){
  const a=project(p,angle,55,7,1.5),b=project(p,angle+360,55,7,1.5);a.forEach((x,i)=>assert(Math.abs(x-b[i])<1e-12));assert(a.every(Number.isFinite));
 }

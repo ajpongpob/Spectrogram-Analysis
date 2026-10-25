@@ -1,4 +1,21 @@
 export const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+// Pick the front-most rendered triangle, with perspective-correct coordinates.
+export function pickSurface(points,indices,screen,yaw,pitch,distance,aspect){
+ const projected=points.map(p=>project(p,yaw,pitch,distance,aspect));
+ let best=null,depth=Infinity;
+ for(let k=0;k<indices.length;k+=3){
+  const ids=[indices[k],indices[k+1],indices[k+2]], [a,b,c]=ids.map(i=>projected[i]);
+  if(a[2]<=0||b[2]<=0||c[2]<=0)continue;
+  const den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);
+  if(Math.abs(den)<1e-12)continue;
+  const u=((b[1]-c[1])*(screen[0]-c[0])+(c[0]-b[0])*(screen[1]-c[1]))/den;
+  const v=((c[1]-a[1])*(screen[0]-c[0])+(a[0]-c[0])*(screen[1]-c[1]))/den,w=1-u-v;
+  if(Math.min(u,v,w)<-1e-7)continue;
+  const weights=[u/a[2],v/b[2],w/c[2]],sum=weights.reduce((x,y)=>x+y,0),z=1/sum;
+  if(z<depth){depth=z;best=[0,1,2].map(axis=>ids.reduce((n,id,i)=>n+points[id][axis]*weights[i]/sum,0))}
+ }
+ return best;
+}
 export function project([x,y,z],yaw,pitch,distance,aspect){
  const a=yaw*Math.PI/180,b=pitch*Math.PI/180;
  const u=Math.cos(a)*x-Math.sin(a)*y,v=Math.sin(a)*x+Math.cos(a)*y;

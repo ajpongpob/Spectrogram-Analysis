@@ -1,4 +1,4 @@
-import {clamp,project,heightOf,meshIndices,meshSamples} from './surface-math.mjs';
+import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface} from './surface-math.mjs';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
 
 export function createSurface(getData,plot){
@@ -18,7 +18,12 @@ export function createSurface(getData,plot){
  $('seek3d').oninput=()=>getData()?.seek(+$('seek3d').value);
  $('follow3d').onchange=()=>{const d=getData();if(d){d.follow.checked=$('follow3d').checked;d.follow.dispatchEvent(new Event('change'))}};
  for(const [id,method,factor] of [['timeIn3d','zoomTime',.5],['timeOut3d','zoomTime',2],['pitchIn3d','zoomPitch',.5],['pitchOut3d','zoomPitch',2]])$(id).onclick=()=>getData()?.[method](factor);
- wrap.querySelector('p').textContent='Space: เล่น/หยุด · ลาก: หมุน 360°/ก้มเงย · ล้อเมาส์: ซูมเวลา · Ctrl+ล้อเมาส์: ซูมระดับเสียง · Alt+ล้อเมาส์: ระยะกล้อง · สี ความสว่าง แกน และกริดใช้ตัวปรับเดิมด้านบน · การวาดกำกับ/เลือกกรอบยังใช้ใน 2D';
+ wrap.querySelector('p').textContent='คลิกพื้นผิว: ย้ายจุดเริ่มเล่น · ลากซ้าย: เลื่อนช่วงภาพเหมือน 2D · Shift+ลาก: หมุนกล้อง · Space: เล่น/หยุด · ล้อเมาส์: ซูมเวลาที่ชี้ · Ctrl+ล้อเมาส์: ซูมระดับเสียงที่ชี้ · Alt+ล้อเมาส์: ระยะกล้อง · Esc: ยกเลิกการลาก';
+ canvas.setAttribute('aria-label','พื้นผิวสเปกโตรแกรมสามมิติ คลิกเลือกเวลา ลากเลื่อนภาพ Shift ลากหมุน');
+ canvas.style.cursor='grab';
+ let pickPoints=[],pickIndices=[];
+ function cameraDistance(){return distance*Math.max(1,1.15/(canvas.clientWidth/canvas.clientHeight))}
+ function hit(e){if(!pickPoints.length)return null;const r=canvas.getBoundingClientRect();return pickSurface(pickPoints,pickIndices,[(e.clientX-r.left)/r.width*2-1,1-(e.clientY-r.top)/r.height*2],yaw,pitch,cameraDistance(),r.width/r.height)}
  let enabled=false,gl,program,buffer,indexBuffer,lineBuffer,indexCount=0,lineCount=0,yaw=325,pitch=55,distance=7,height=1,mesh,v,signature='',pending=0,drag=null,lost=false;
  const vertex=`attribute vec3 position;attribute vec3 color;varying vec3 tint;uniform vec4 camera;void main(){float a=radians(camera.x),b=radians(camera.y);float x=cos(a)*position.x-sin(a)*position.y;float y=sin(a)*position.x+cos(a)*position.y;float h=cos(b)*y+sin(b)*position.z;float d=-sin(b)*y+cos(b)*position.z-camera.z;float f=2.41421356237;gl_Position=vec4(f*x/camera.w,f*h,-1.002002*d-.2002002,-d);tint=color;}`;
  const fragment='precision mediump float;varying vec3 tint;void main(){gl_FragColor=vec4(tint,1.);}';
@@ -42,7 +47,8 @@ export function createSurface(getData,plot){
    }else{const val=clamp(legacyIntensity(raw,b)*d.style.gain,0,1)*4,j=Math.min(3,Math.floor(val)),f=val-j;col=pal[j].map((c,k)=>c*(1-f)+pal[j+1][k]*f)}
    verts.set([-2+4*(x+.5)/nx,-1.5+3*(y+.5)/ny,heightOf(raw,height),...col.map(c=>c/255)],i*6);
   }
-  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,verts,gl.STATIC_DRAW);const indices=meshIndices(nx,ny);indexCount=indices.length;gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+  pickPoints=Array.from({length:nx*ny},(_,i)=>Array.from(verts.subarray(i*6,i*6+3)));
+  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,verts,gl.STATIC_DRAW);const indices=meshIndices(nx,ny);pickIndices=indices;indexCount=indices.length;gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   const lines=[];function line(a,b){lines.push(...a,.35,.37,.48,...b,.35,.37,.48)}
   if(d.style.timeGrid)for(let i=0;i<=4;i++)line([-2+i,-1.5,-.605],[-2+i,1.5,-.605]);if(d.style.noteGrid)for(let n=Math.ceil(v.lo);n<=v.hi;n++){const y=-1.5+3*(n-v.lo)/(v.hi-v.lo);line([-2,y,-.605],[2,y,-.605])}line([-2,-1.5,-.6],[-2,-1.5,heightOf(3,height)]);
   lineCount=lines.length/6;gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lines),gl.STATIC_DRAW);
@@ -74,10 +80,22 @@ export function createSurface(getData,plot){
  toolbar.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='ArrowRight'||e.key==='End';setMode(next);(next?button:button2d).focus()};
  for(const id of ['yaw3d','pitch3d','height3d'])$(id).oninput=()=>{yaw=+$('yaw3d').value;pitch=+$('pitch3d').value;height=+$('height3d').value;controls();schedule(id==='height3d')};
  $('reset3d').onclick=()=>{yaw=325;pitch=55;distance=7;height=1;controls();schedule(true)};$('top3d').onclick=()=>{yaw=0;pitch=0;controls();schedule()};
- canvas.onpointerdown=e=>{if(e.button!==0)return;drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId)};
- canvas.onpointermove=e=>{if(!drag)return;yaw=(yaw+(e.clientX-drag.x)*.5+360)%360;pitch=clamp(pitch+(e.clientY-drag.y)*.4,-85,85);drag={x:e.clientX,y:e.clientY};controls();schedule()};canvas.onpointerup=canvas.onpointercancel=()=>drag=null;
- canvas.addEventListener('wheel',e=>{e.preventDefault();const f=Math.exp(clamp(e.deltaY,-300,300)*.002);if(e.altKey){distance=clamp(distance*f,3.5,18);schedule()}else if(e.ctrlKey)getData()?.zoomPitch(f);else getData()?.zoomTime(f)},{passive:false});
- canvas.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();yaw=(yaw+(e.key==='ArrowRight'?5:e.key==='ArrowLeft'?-5:0)+360)%360;pitch=clamp(pitch+(e.key==='ArrowUp'?5:e.key==='ArrowDown'?-5:0),-85,85);controls();schedule()};
+ canvas.onpointerdown=e=>{if(e.button!==0)return;canvas.focus();const p=hit(e);drag={x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,orbit:e.shiftKey,moved:false,point:p,view:{...getData().view}};canvas.setPointerCapture(e.pointerId)};
+ canvas.onpointermove=e=>{
+  if(!drag)return;const d=drag,dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>3)d.moved=true;if(!d.moved)return;
+  if(d.orbit){yaw=(yaw+(e.clientX-d.lastX)*.5+360)%360;pitch=clamp(pitch+(e.clientY-d.lastY)*.4,-85,85);controls();schedule()}
+  else if(d.point){
+   const aspect=canvas.clientWidth/canvas.clientHeight,dist=cameraDistance(),p=d.point;
+   const a=project(p,yaw,pitch,dist,aspect),b=project([p[0]+.01,p[1],p[2]],yaw,pitch,dist,aspect),c=project([p[0],p[1]+.01,p[2]],yaw,pitch,dist,aspect);
+   const ax=(b[0]-a[0])*canvas.clientWidth/2/.01,ay=-(b[1]-a[1])*canvas.clientHeight/2/.01,bx=(c[0]-a[0])*canvas.clientWidth/2/.01,by=-(c[1]-a[1])*canvas.clientHeight/2/.01,det=ax*by-ay*bx;
+   if(Math.abs(det)>1)getData().pan(d.view,-(dx*by-dy*bx)/det/4*d.view.span,-(ax*dy-ay*dx)/det/3*(d.view.hi-d.view.lo));
+  }
+  d.lastX=e.clientX;d.lastY=e.clientY;
+ };
+ canvas.onpointerup=e=>{if(!drag)return;const d=drag;drag=null;canvas.releasePointerCapture(e.pointerId);if(!d.moved&&!d.orbit&&d.point)getData().seekAt(d.view.start+(d.point[0]+2)/4*d.view.span)};
+ canvas.onpointercancel=()=>drag=null;
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')drag=null});
+ canvas.addEventListener('wheel',e=>{e.preventDefault();if(drag)return;const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1),f=Math.exp(clamp(delta,-300,300)*.002),d=getData();if(e.altKey){distance=clamp(distance*f,3.5,18);schedule()}else{const p=hit(e),v=d.view;if(e.ctrlKey)d.zoomPitch(f,p?v.lo+(p[1]+1.5)/3*(v.hi-v.lo):undefined);else d.zoomTime(f,p?v.start+(p[0]+2)/4*v.span:undefined)}},{passive:false});
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;$('status3d').textContent='WebGL หยุดทำงานชั่วคราว กรุณากลับ 2D หรือรอการคืนค่า'});canvas.addEventListener('webglcontextrestored',()=>{lost=false;gl=null;init();schedule(true)});
  new ResizeObserver(()=>schedule()).observe(canvas);
  $('png3d').onclick=()=>{render();const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const c=out.getContext('2d');c.drawImage(canvas,0,0);c.drawImage(labels,0,0);out.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='spectrogram-3d-prototype.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),10000)},'image/png')};
