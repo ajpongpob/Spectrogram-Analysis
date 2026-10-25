@@ -1,6 +1,7 @@
-import {t,setText} from './i18n.mjs?v=0.7';
-import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=0.7';
-import {createSurfaceAnnotations} from './surface-annotations.mjs?v=0.7';
+import {dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
+import {t,setText} from './i18n.mjs?v=db-1';
+import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=db-1';
+import {createSurfaceAnnotations} from './surface-annotations.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
 
 export function createSurface(getData,plot){
@@ -22,20 +23,20 @@ export function createSurface(getData,plot){
  function cameraDistance(){return distance*Math.max(1,1.15/(canvas.clientWidth/canvas.clientHeight))}
  function hit(e){if(!pickPoints.length)return null;const r=canvas.getBoundingClientRect();return pickSurface(pickPoints,pickIndices,[((e.clientX-r.left)/r.width*2-1)/framing.scale+framing.x,(1-(e.clientY-r.top)/r.height*2)/framing.scale+framing.y],yaw,pitch,cameraDistance(),r.width/r.height)}
  let keys=[];
- let enabled=false,gl,program,buffer,indexBuffer,lineBuffer,indexCount=0,lineCount=0,yaw=325,pitch=55,distance=7,height=1,mesh,v,signature='',pending=0,drag=null,lost=false;
+ let enabled=false,gl,program,buffer,indexBuffer,lineBuffer,indexCount=0,lineCount=0,yaw=325,pitch=55,distance=7,height=1,mesh,displayMesh,v,signature='',pending=0,drag=null,lost=false;
  const pixel=e=>{const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}};
  const ndc=p=>[(p.x/canvas.clientWidth*2-1)/framing.scale+framing.x,(1-p.y/canvas.clientHeight*2)/framing.scale+framing.y];
  function annotationProject(point){
-  const x=-2+4*(point.t-v.start)/v.span,y=-1.5+3*(point.m-v.lo)/(v.hi-v.lo),raw=point.h??meshRawAt(mesh,x,y),p=screenProject([x,y,heightOf(raw,height)]);
+  const x=-2+4*(point.t-v.start)/v.span,y=-1.5+3*(point.m-v.lo)/(v.hi-v.lo),raw=point.h!==undefined&&(point.unit||'cqt')===getData().style.levelMode&&(point.unit!=='db'||point.dbFloor===getData().style.dbFloor)?point.h:meshRawAt(displayMesh,x,y),p=screenProject([x,y,heightOf(raw,height)]);
   return {x:(p[0]+1)*canvas.clientWidth/2,y:(1-p[1])*canvas.clientHeight/2,raw};
  }
  function annotationPoint(pixel,raw,limited=true){
   const screen=ndc(pixel),aspect=canvas.clientWidth/canvas.clientHeight;
   let point=raw===undefined?pickSurface(pickPoints,pickIndices,screen,yaw,pitch,cameraDistance(),aspect):null;
-  if(point)raw=meshRawAt(mesh,point[0],point[1]);
+  if(point)raw=meshRawAt(displayMesh,point[0],point[1]);
   else {raw??=0;point=unprojectPlane(screen,heightOf(raw,height),yaw,pitch,cameraDistance(),aspect)}
   if(!point||limited&&(Math.abs(point[0])>2||Math.abs(point[1])>1.5))return null;
-  return {t:v.start+(point[0]+2)/4*v.span,m:v.lo+(point[1]+1.5)/3*(v.hi-v.lo),h:raw};
+  return {t:v.start+(point[0]+2)/4*v.span,m:v.lo+(point[1]+1.5)/3*(v.hi-v.lo),h:raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor};
  }
  const ink=createSurfaceAnnotations({getData,project:annotationProject,pointAt:annotationPoint,pixel,canvas,redraw:()=>schedule()});
  const vertex=`attribute vec3 position;attribute vec3 color;varying vec3 tint;uniform vec4 camera;uniform vec3 framing;void main(){float a=radians(camera.x),b=radians(camera.y);float x=cos(a)*position.x-sin(a)*position.y;float y=sin(a)*position.x+cos(a)*position.y;float h=cos(b)*y+sin(b)*position.z;float d=-sin(b)*y+cos(b)*position.z-camera.z;float f=2.41421356237;gl_Position=vec4(f*x/camera.w,f*h,-1.002002*d-.2002002,-d);gl_Position.xy=(gl_Position.xy/gl_Position.w-framing.yz)*framing.x*gl_Position.w;tint=color;}`;
@@ -49,23 +50,25 @@ export function createSurface(getData,plot){
  function controls(){for(const [id,value] of [['yaw3d',yaw],['pitch3d',pitch],['height3d',height]])$(id).value=value;$('yawOut').value=Math.round(yaw)+'°';$('pitchAngleOut').value=Math.round(pitch)+'°';$('heightOut').value=height.toFixed(2)+'×'}
  function rebuild(){
   const d=getData();if(!d)return;v=d.view;
-  const key=JSON.stringify([v,d.rows]);if(key!==signature){mesh=meshSamples(d.samples,d.rows,v);signature=key}
+  const db=d.style.levelMode==='db',key=JSON.stringify([v,d.rows,db]);if(key!==signature){mesh=meshSamples(db?d.levels:d.samples,d.rows,v);signature=key}
+  displayMesh=db?{...mesh,values:Float32Array.from(mesh.values,a=>3*dbUnit(a,d.style.dbFloor))}:mesh;
   const {nx,ny,values,bins}=mesh,verts=new Float32Array(nx*ny*6),pal=d.palettes[d.style.palette];let clipped=0;
   for(let x=0;x<nx;x++)for(let y=0;y<ny;y++){
    const i=x*ny+y,raw=values[i],b=bins[i];let col;
-   if(raw>3)clipped++;
-   if(d.style.palette==='reference'){
+   if(raw>(db?1:3))clipped++;
+   if(db)col=dbRGB(raw,d.style.palette==='reference'?null:pal,referenceRGB,d.style.dbFloor);
+   else if(d.style.palette==='reference'){
     col=referenceRGB(raw,d.style.gain);
     if(d.style.peak&&d.peaks){const t=mesh.frames[i],a=d.peaks[t*960+b]/255;col=col.map((c,k)=>c*(1-[.6,.8,.2][k]*a))}
    }else{const val=clamp(legacyIntensity(raw,b)*d.style.gain,0,1)*4,j=Math.min(3,Math.floor(val)),f=val-j;col=pal[j].map((c,k)=>c*(1-f)+pal[j+1][k]*f)}
-   verts.set([-2+4*(x+.5)/nx,-1.5+3*(y+.5)/ny,heightOf(raw,height),...col.map(c=>c/255)],i*6);
+   verts.set([-2+4*(x+.5)/nx,-1.5+3*(y+.5)/ny,heightOf(displayMesh.values[i],height),...col.map(c=>c/255)],i*6);
   }
   geometryVersion++;pickPoints=Array.from({length:nx*ny},(_,i)=>Array.from(verts.subarray(i*6,i*6+3)));
   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,verts,gl.STATIC_DRAW);const indices=meshIndices(nx,ny);pickIndices=indices;indexCount=indices.length;gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
   const lines=[],gridColor=d.style.palette==='gray'?[.34,.38,.45]:[.70,.74,.82];function line(a,b){lines.push(...a,...gridColor,...b,...gridColor)}
   if(d.style.timeGrid)for(let i=0;i<=4;i++)line([-2+i,-1.5,-.605],[-2+i,1.5,-.605]);if(d.style.noteGrid)for(let n=Math.ceil(v.lo);n<=v.hi;n++){const y=-1.5+3*(n-v.lo)/(v.hi-v.lo);line([-2,y,-.605],[2,y,-.605])}line([-2,-1.5,-.6],[-2,-1.5,heightOf(3,height)]);
   lineCount=lines.length/6;gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lines),gl.STATIC_DRAW);
-  setText($('status3d'),'status3d',{start:v.start.toFixed(2),end:(v.start+v.span).toFixed(2),nx,ny,clipped});
+  setText($('status3d'),db?'status3dDb':'status3d',{start:v.start.toFixed(2),end:(v.start+v.span).toFixed(2),nx,ny,clipped,floor:d.style.dbFloor});
  }
  function bind(b){gl.bindBuffer(gl.ARRAY_BUFFER,b);for(const [name,offset] of [['position',0],['color',12]]){const loc=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,24,offset)}}
  function render(includeSelection=true){if(!enabled||!gl||lost||!v)return;fitScene();const w=Math.max(1,canvas.clientWidth),h=canvas.clientHeight,dpr=Math.min(2,devicePixelRatio),fitDistance=distance*Math.max(1,1.15/(w/h));canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);labels.width=canvas.width;labels.height=canvas.height;gl.viewport(0,0,canvas.width,canvas.height);const mono=getData()?.style.palette==='gray';canvas.parentElement.style.background=mono?'#ffffff':'#090911';gl.clearColor(...(mono?[1,1,1,1]:[.035,.035,.065,1]));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniform4f(gl.getUniformLocation(program,'camera'),yaw,pitch,fitDistance,w/h);gl.uniform3f(gl.getUniformLocation(program,'framing'),framing.scale,framing.x,framing.y);bind(buffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.drawElements(gl.TRIANGLES,indexCount,gl.UNSIGNED_SHORT,0);// Grid lines are an x-ray overlay: draw them through the surface, then restore depth testing.
@@ -82,7 +85,7 @@ export function createSurface(getData,plot){
   for(let i=0;i<=4;i++)label([-2+i,-1.65,-.6],data.formatTime(v.start+v.span*i/4,1,data.style.clock));
   const current=data.audio.currentTime;
   if(current>=v.start&&current<=v.start+v.span){const x=-2+4*(current-v.start)/v.span;const pts=[screenProject([x,-1.5,-.6]),screenProject([x,1.5,-.6])];c.strokeStyle=mono?'#1d1d1f':'#fff';c.lineWidth=2;c.beginPath();pts.forEach((p,i)=>{const px=(p[0]+1)*w/2,py=(1-p[1])*h/2;if(i)c.lineTo(px,py);else c.moveTo(px,py)});c.stroke();label([x,-1.85,-.6],'▶ '+data.formatTime(current,2,data.style.clock))}
-  for(let i=0;i<=3;i++)label([-2.15,-1.5,heightOf(i,height)],String(i));
+  for(let i=0;i<=3;i++)label([-2.15,-1.5,heightOf(i,height)],data.style.levelMode==='db'?String(data.style.dbFloor+i/3*-data.style.dbFloor):String(i));
   // The keyboard follows the chosen projected edge, so it stays aligned with pitch.
   const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
   const rightEdge=screenProject([2,0,-.6])[0]>=screenProject([-2,0,-.6])[0]?1:-1,side=$('axisSide3d').value==='right'?rightEdge:-rightEdge;
@@ -101,7 +104,7 @@ export function createSurface(getData,plot){
   }
   function hiDensity(){const a=screenProject([keysOuter,-1.5,-.6]),b=screenProject([keysOuter,1.5,-.6]);return Math.hypot((a[0]-b[0])*w/2,(a[1]-b[1])*h/2)/(v.hi-v.lo)}
   c.fillStyle=mono?'#1d1d1f':'#e7e0f4';c.font='12px system-ui';
-  c.textAlign='left';c.font='10px system-ui';c.fillText(t('axes3d')+' · '+t('height3dNote',{yaw:Math.round(yaw)}),15,h-14);
+  c.textAlign='left';c.font='10px system-ui';c.fillText(t(data.style.levelMode==='db'?'axes3dDb':'axes3d')+' · '+t(data.style.levelMode==='db'?'height3dDbNote':'height3dNote',{yaw:Math.round(yaw)}),15,h-14);
   ink.draw(c,includeSelection);
  }
  let needsBuild=false;
@@ -139,5 +142,5 @@ export function createSurface(getData,plot){
  new ResizeObserver(()=>{drag=null;ink.cancel();schedule()}).observe(canvas);
  $('png3d').onclick=()=>{if(needsBuild){rebuild();needsBuild=false}render(false);const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const c=out.getContext('2d');c.drawImage(canvas,0,0);c.drawImage(labels,0,0);out.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='spectrogram-3d.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),10000)},'image/png');schedule()};
  let lastFrame='';
- return {anchorObject:a=>({...a,points:a.points.map(p=>({...p,h:p.h??annotationProject(p).raw}))}),inspect:()=>({yaw,pitch,height,distance:cameraDistance(),framing:{...framing},view:{...v},nx:mesh?.nx,ny:mesh?.ny}),pasteOffset:point=>{const p=annotationProject(point);if(p.x>=0&&p.x<canvas.clientWidth-36&&p.y>=0&&p.y<canvas.clientHeight-36){const next=annotationPoint({x:p.x+18,y:p.y+18},p.raw,false);if(next)return {dt:next.t-point.t,dm:next.m-point.m}}return {dt:v.start+v.span*.5-point.t,dm:(v.lo+v.hi)/2-point.m}},repaint:()=>schedule(),cancelAnnotation:()=>ink.cancel(),get annotating(){return ink.dragging},update:()=>{ink.cancel();schedule(true)},frame:()=>{if(!enabled)return;const d=getData();if(!d)return;const key=[Math.floor(d.audio.currentTime*30),d.audio.paused,d.follow.checked,d.style.clock].join(':');if(key===lastFrame)return;lastFrame=key;schedule()}};
+ return {anchorObject:a=>({...a,points:a.points.map(p=>({...p,h:annotationProject(p).raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor}))}),inspect:()=>({yaw,pitch,height,distance:cameraDistance(),framing:{...framing},view:{...v},nx:mesh?.nx,ny:mesh?.ny,levelMode:getData()?.style.levelMode,dbFloor:getData()?.style.dbFloor}),pasteOffset:point=>{const p=annotationProject(point);if(p.x>=0&&p.x<canvas.clientWidth-36&&p.y>=0&&p.y<canvas.clientHeight-36){const next=annotationPoint({x:p.x+18,y:p.y+18},p.raw,false);if(next)return {dt:next.t-point.t,dm:next.m-point.m}}return {dt:v.start+v.span*.5-point.t,dm:(v.lo+v.hi)/2-point.m}},repaint:()=>schedule(),cancelAnnotation:()=>ink.cancel(),get annotating(){return ink.dragging},update:()=>{ink.cancel();schedule(true)},frame:()=>{if(!enabled)return;const d=getData();if(!d)return;const key=[Math.floor(d.audio.currentTime*30),d.audio.paused,d.follow.checked,d.style.clock].join(':');if(key===lastFrame)return;lastFrame=key;schedule()}};
 }

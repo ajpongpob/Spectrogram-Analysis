@@ -14,7 +14,9 @@
     "test:objects": "node tests/annotation-objects.mjs",
     "test:workspace": "node tests/workspace-ui.mjs",
     "test:shapes": "node tests/shapes-fullscreen-ui.mjs",
-    "test:v07": "node tests/v07-3d-ui.mjs"
+    "test:v07": "node tests/v07-3d-ui.mjs",
+    "test:db": "node tests/db-calibration.mjs",
+    "test:levels": "node tests/level-modes-ui.mjs"
   },
   "dependencies": {
     "@digitaldefiance/bzip2-wasm": "^1.1.1"

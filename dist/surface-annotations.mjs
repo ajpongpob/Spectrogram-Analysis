@@ -1,5 +1,5 @@
-import {drawAnnotations} from './annotation-render.mjs?v=0.7';
-import {strokeTypes,hitObject,objectBounds,translateObject} from './annotation-objects.mjs?v=0.7';
+import {drawAnnotations} from './annotation-render.mjs?v=db-1';
+import {strokeTypes,hitObject,objectBounds,translateObject} from './annotation-objects.mjs?v=db-1';
 // Screen-facing shapes have time/pitch anchors on a constant-intensity plane.
 // Camera changes project those anchors; edits never change the CQT samples.
 export function createSurfaceAnnotations({getData,project,pointAt,pixel,canvas,redraw}){
@@ -16,7 +16,7 @@ export function createSurfaceAnnotations({getData,project,pointAt,pixel,canvas,r
   const p=pixel(e);canvas.focus({preventScroll:true});s.pause();
   if(s.mode==='select'){
    const index=hit(p);s.select(index);if(index<0){redraw();return true}
-   const original=s.items[index],item={...original,points:original.points.map(p=>({...p,h:p.h??project(p).raw}))},h=project(item.points[0]).raw,start=pointAt(p,h,false);
+   const original=s.items[index],item={...original,points:original.points.map(p=>({...p,h:project(p).raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor}))},h=project(item.points[0]).raw,start=pointAt(p,h,false);
    if(start)drag={mode:'move',startPixel:p,start,h,item,index,before:s.items,moved:false};
   }else{
    if(s.mode==='text'&&!s.style.text){s.emptyText();return true}

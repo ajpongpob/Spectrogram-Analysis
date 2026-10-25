@@ -1,5 +1,5 @@
 import './lab.css';
-const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=0.7',document.baseURI).href);
+const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=db-1',document.baseURI).href);
 const $=id=>document.getElementById(id),drop=$('drop-zone'),input=$('file-input');
 initLanguage();
 let worker,jobId=0,frame,pending;
@@ -20,7 +20,7 @@ async function analyse(file){reset();const id=jobId;$('job').hidden=false;drop.h
   if(id!==jobId)return;
   const duration=buffer.duration;
   if(!duration||duration<.1)throw fault('tooShort');
-  const estimate=buffer.length*8+Math.ceil(duration*60)*960*5;
+  const estimate=buffer.length*16+Math.ceil(duration*60)*960*9;
   if(estimate>512*1024*1024)throw fault('tooLong');
   const left=new Float32Array(buffer.getChannelData(0)),right=new Float32Array(buffer.getChannelData(Math.min(1,buffer.numberOfChannels-1))),sampleRate=buffer.sampleRate;buffer=null;
   setText($('file-meta'),'fileMeta',{size:(file.size/1e6).toFixed(1),duration:`${Math.floor(duration/60)}:${String(Math.floor(duration%60)).padStart(2,'0')}`});
@@ -33,7 +33,7 @@ async function analyse(file){reset();const id=jobId;$('job').hidden=false;drop.h
   worker.postMessage({left:left.buffer,right:right.buffer,sampleRate},[left.buffer,right.buffer]);
  }catch(e){if(id===jobId)failure(e)}
 }
-window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==frame?.contentWindow)return;if(e.data?.type==='viewer-expanded')document.body.classList.toggle('viewer-expanded',e.data.expanded===true);if(e.data?.type==='viewer-height'&&Number.isFinite(e.data.height)){frame.style.height=Math.max(400,Math.min(4000,e.data.height+4))+'px'}if(e.data?.type==='viewer-listening'&&pending){const data=pending;pending=null;frame.contentWindow.postMessage(data,location.origin,[data.values,...(data.peaks?[data.peaks]:[])])}if(e.data?.type==='viewer-ready'){progress(100,'ready');$('change-file').hidden=false;document.body.classList.add('has-viewer');frame.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})}if(e.data?.type==='viewer-error')failure(Error(e.data.message))});
+window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==frame?.contentWindow)return;if(e.data?.type==='viewer-expanded')document.body.classList.toggle('viewer-expanded',e.data.expanded===true);if(e.data?.type==='viewer-height'&&Number.isFinite(e.data.height)){frame.style.height=Math.max(400,Math.min(4000,e.data.height+4))+'px'}if(e.data?.type==='viewer-listening'&&pending){const data=pending;pending=null;frame.contentWindow.postMessage(data,location.origin,[data.values,...(data.levels?[data.levels]:[]),...(data.peaks?[data.peaks]:[])])}if(e.data?.type==='viewer-ready'){progress(100,'ready');$('change-file').hidden=false;document.body.classList.add('has-viewer');frame.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})}if(e.data?.type==='viewer-error')failure(Error(e.data.message))});
 drop.onclick=()=>input.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}};
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragging')};drop.ondragleave=()=>drop.classList.remove('dragging');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragging');if(e.dataTransfer.files[0])analyse(e.dataTransfer.files[0])};
 input.onchange=()=>{if(input.files[0])analyse(input.files[0])};$('cancel').onclick=reset;$('change-file').onclick=reset;

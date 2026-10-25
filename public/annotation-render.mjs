@@ -1,4 +1,4 @@
-import {strokeWidth,arrowGeometry,trianglePoints} from './annotation-objects.mjs?v=0.7';
+import {strokeWidth,arrowGeometry,trianglePoints} from './annotation-objects.mjs?v=db-1';
 // Both views and PNG exports use the same object renderer.
 export function drawAnnotations(g,list,project){
  for(const a of list){

@@ -51,3 +51,7 @@ With the built site served locally, `pnpm test:shapes` checks new shape creation
 The Axes & grid section contains 3D pitch-axis placement. Annotate now works in both 2D and 3D with shared objects, history and persistence. 3D objects retain time/pitch and drawing-plane intensity anchors; PNG exports include them. Clicking piano keys in either mode plays an equal-tempered, synthesized piano-like reference tone for that register, without changing playback position. Both the landing page and workspace display V0.7.
 
 `pnpm test:v07` exercises these features, the actual analysis worker at three reference pitches, projection/picking across camera settings, browser audio waveforms, fullscreen, and export pixels. See `docs/3D-VIEWER.md` for annotation geometry and the accuracy review.
+
+## Signal level scales
+
+Choose **CQT** or **dBFS** under **Axes & grid → Signal level scale**. The selection applies to both 2D and 3D. dBFS adds a 2D color scale and a 3D height scale with a configurable display floor. It uses an independent, unfiltered, per-bin sine-calibrated analysis with a fixed digital reference; it is not dB SPL. CQT data and rendering remain available unchanged. Details and measurement limits are in `docs/3D-VIEWER.md`.
