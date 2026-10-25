@@ -1,6 +1,6 @@
 'use strict';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=grayscale-white-1';
+import {createSurface} from './surface-3d.mjs?v=lab-popup-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
 const LEFT=108,TOP=12,BOTTOM=30,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -116,70 +116,68 @@ async function init(){try{const packed=bytes(meta.data);meta.data='';const buf=a
 function tick(){let moved=false;if(!audio.paused&&Math.abs(audio.currentTime-lastPlay)>.04){if($('follow').checked&&(audio.currentTime>start+span*.85||audio.currentTime<start))position(audio.currentTime);$('seek').value=audio.currentTime;lastPlay=audio.currentTime;moved=true}if(dirty)render();else if(moved)overlay();surface.frame();requestAnimationFrame(tick)}
 window.viewerTest={binPitch,pitchBin,hz,note,yForPitch,pitchForY,formatTime,get state(){return {...view(),rows:meta.rows,ready:!!samples,annotations:annotations.length}},sample:(frame,bin)=>samples[frame*960+bin]};
 const surface=createSurface(()=>samples&&rawEncoding?{samples,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
-/* Desktop analysis workbench: controls beside, not stacked above, the spectrogram.
-   Retain all existing control IDs, DOM elements, and event listeners. */
+/* Desktop: frequently used controls above; a category rail beside the spectrogram. */
 function mountLabWorkbench(){
  const main=canvas.closest('main');
- // The viewer runs inside a dynamically sized iframe. Use the real outer
- // browser viewport height rather than iframe-relative vh for the plot.
- const updateScreenHeight=()=>{
-  let screenHeight=window.innerHeight;
-  try{screenHeight=window.parent.innerHeight||screenHeight}catch{}
-  document.documentElement.style.setProperty('--lab-screen-height',Math.max(550,screenHeight)+'px');
- };
- updateScreenHeight();
- try{window.parent.addEventListener('resize',updateScreenHeight)}catch{window.addEventListener('resize',updateScreenHeight)}
- const tabs=main.querySelector('.view-tabs');
- const groups=[...main.querySelectorAll(':scope > .tools')];
- const panel3d=$('panel3d');
+ const setHeight=()=>{let h=window.innerHeight;try{h=window.parent.innerHeight||h}catch{}document.documentElement.style.setProperty('--lab-screen-height',Math.max(550,h)+'px')};
+ setHeight();try{window.parent.addEventListener('resize',setHeight)}catch{window.addEventListener('resize',setHeight)}
+ const tabs=main.querySelector('.view-tabs'),groups=[...main.querySelectorAll(':scope > .tools')],panel3d=$('panel3d');
  const hint=[...main.querySelectorAll(':scope > p')].find(p=>p.textContent.startsWith('Spacebar:'));
- if(!tabs||groups.length!==5||!panel3d||!hint)throw Error('Viewer workbench controls are incomplete');
- const [transport,zoom,display,annotation,capture]=groups;
- const toolbar=document.createElement('section');
- toolbar.className='lab-top';toolbar.setAttribute('aria-label','เครื่องมือหลักและการเล่นเสียง');
+ if(!tabs||groups.length!==5||!panel3d||!hint)throw Error('Incomplete spectrogram controls');
+ const [transport,zoom,appearance,annotation,capture]=groups;
+ const top=document.createElement('section');top.className='lab-top';
  const grid=document.createElement('div');grid.className='lab-grid';
- const stage=document.createElement('section');stage.className='lab-stage';stage.setAttribute('aria-label','พื้นที่ภาพ Spectrogram');
- const sidebar=document.createElement('aside');sidebar.className='lab-sidebar';sidebar.setAttribute('aria-label','เครื่องมือปรับแต่งภาพ');
- main.prepend(toolbar);toolbar.append(tabs,transport);
- toolbar.after(grid);grid.append(stage,sidebar);
- // Image-specific controls belong in the side panel; transport stays visible above.
- display.prepend($('axis').closest('label'));
- display.append(gainLabel,gainNumber);
+ const stage=document.createElement('section');stage.className='lab-stage';
+ const aside=document.createElement('aside');aside.className='lab-sidebar';aside.setAttribute('aria-label','เครื่องมือข้างภาพ Spectrogram');
+ const rail=document.createElement('nav');rail.className='lab-tool-rail';rail.setAttribute('aria-label','หมวดเครื่องมือปรับภาพ');
+ const popup=document.createElement('div');popup.className='lab-popover';popup.setAttribute('role','region');popup.setAttribute('aria-label','ปรับค่าภาพ');popup.hidden=true;
+ const head=document.createElement('div');head.className='lab-popover-head';
+ const title=document.createElement('strong');title.className='lab-popover-title';
+ const close=document.createElement('button');close.type='button';close.className='lab-popover-close';close.setAttribute('aria-label','ปิดแผงปรับแต่ง');close.textContent='×';
+ head.append(title,close);popup.append(head);
+ main.prepend(top);top.append(tabs,transport);top.after(grid);grid.append(stage,aside);aside.append(rail,popup);
  stage.append(panel3d,canvas,$('readout'),$('seek'),hint);
- const nav=document.createElement('div');nav.className='lab-side-tabs';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','หมวดเครื่องมือ');
- sidebar.append(nav);
- const specs=[['view','ภาพและซูม',[zoom,display]],['ink','เขียนกำกับ',[annotation]],['export','ส่งออกภาพ',[capture]]];
- const panels=new Map(),buttons=new Map();
- let current='view';
- function select(name,focus=false){
-  current=name;
-  for(const [key,panel] of panels){const selected=key===name;panel.hidden=!selected;const button=buttons.get(key);button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1}
-  if(focus)buttons.get(name).focus();
+ const quick=document.createElement('div');quick.className='lab-quick-zoom';
+ for(const [label,ids] of [['เวลา',['timeIn','timeOut']],['ระดับเสียง',['pitchIn','pitchOut']]]){
+  const group=document.createElement('div');group.className='lab-zoom-set';
+  const text=document.createElement('span');text.textContent=label;group.append(text);
+  for(const id of ids)group.append($(id));quick.append(group);
  }
- for(const [id,title,items] of specs){
-  const button=document.createElement('button');button.type='button';button.id='lab-tab-'+id;button.setAttribute('role','tab');button.setAttribute('aria-controls','lab-panel-'+id);button.textContent=title;nav.append(button);buttons.set(id,button);
-  const panel=document.createElement('section');panel.id='lab-panel-'+id;panel.className='lab-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);
-  sidebar.append(panel);panels.set(id,panel);for(const el of items)panel.append(el);
-  button.addEventListener('click',()=>select(id));
+ top.append(quick);zoom.querySelectorAll('strong').forEach(el=>el.remove());
+ const axes=document.createElement('div');axes.className='tools';axes.setAttribute('aria-label','แกนและเส้นกริด');
+ for(const id of ['axis','timeFormat','noteGrid','timeGrid'])axes.append($(id).closest('label'));
+ appearance.append(gainLabel,gainNumber);
+ const controls3d=[...panel3d.querySelectorAll(':scope > .tools')];
+ if(controls3d.length!==2)throw Error('Missing 3D controls');
+ const specs=[
+  ['colors','สีและความเข้ม','◐',[appearance]],
+  ['axis','แกนและกริด','▦',[axes]],
+  ['zoom','ซูมเพิ่มเติม','⌕',[zoom]],
+  ['draw','เขียนกำกับ','✎',[annotation]],
+  ['export','ส่งออก PNG','↓',[capture]],
+  ['three','ปรับภาพ 3D','◇',controls3d]
+ ];
+ const buttons=new Map(),panels=new Map();let active=null;
+ function select(name){
+  active=name;popup.hidden=!name;
+  for(const [id,panel] of panels){const selected=id===name;panel.hidden=!selected;buttons.get(id).setAttribute('aria-expanded',String(selected));if(selected)title.textContent=specs.find(spec=>spec[0]===id)[1]}
  }
- nav.addEventListener('keydown',e=>{
-  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-  e.preventDefault();
-  const visible=[...buttons].filter(([,button])=>!button.hidden).map(([key])=>key);
-  const index=visible.indexOf(current);
-  const next=e.key==='Home'?0:e.key==='End'?visible.length-1:(index+(e.key==='ArrowRight'?1:-1)+visible.length)%visible.length;
-  select(visible[next],true);
- });
- select('view');
- // The 3D viewer keeps its own orbit/height controls directly above its canvas.
- // Annotation/capture are 2D-only; leave the shared appearance controls available.
- const sync3d=()=>{
-  const is3d=!panel3d.hidden;
-  for(const id of ['ink','export'])buttons.get(id).hidden=is3d;
-  if(is3d&&current!=='view')select('view');
- };
- new MutationObserver(sync3d).observe(panel3d,{attributes:true,attributeFilter:['hidden']});
- sync3d();
+ for(const [id,label,symbol,items] of specs){
+  const button=document.createElement('button');button.type='button';button.className='lab-rail-button';
+  button.id='lab-button-'+id;button.setAttribute('aria-controls','lab-panel-'+id);button.setAttribute('aria-expanded','false');button.setAttribute('aria-label',label);button.title=label;
+  const icon=document.createElement('span');icon.className='lab-rail-symbol';icon.setAttribute('aria-hidden','true');icon.textContent=symbol;
+  const name=document.createElement('span');name.className='lab-rail-label';name.textContent=label;
+  button.append(icon,name);rail.append(button);buttons.set(id,button);
+  const panel=document.createElement('section');panel.id='lab-panel-'+id;panel.className='lab-panel';panel.hidden=true;panel.setAttribute('aria-labelledby',button.id);
+  popup.append(panel);panels.set(id,panel);for(const item of items)panel.append(item);
+  button.addEventListener('click',()=>select(active===id?null:id));
+ }
+ close.addEventListener('click',()=>{const old=active;select(null);buttons.get(old)?.focus()});
+ document.addEventListener('pointerdown',e=>{if(active&&!aside.contains(e.target))select(null)});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){const old=active;select(null);buttons.get(old)?.focus()}});
+ rail.addEventListener('keydown',e=>{if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;e.preventDefault();const visible=[...buttons].filter(([,b])=>!b.hidden).map(([k])=>k);if(!visible.length)return;const cur=visible.indexOf([...buttons].find(([,b])=>b===document.activeElement)?.[0]||visible[0]),i=e.key==='Home'?0:e.key==='End'?visible.length-1:(cur+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length;buttons.get(visible[i]).focus()});
+ const sync=()=>{const is3d=!panel3d.hidden;for(const id of ['draw','export'])buttons.get(id).hidden=is3d;buttons.get('three').hidden=!is3d;if(active&&buttons.get(active).hidden)select(null)};
+ new MutationObserver(sync).observe(panel3d,{attributes:true,attributeFilter:['hidden']});sync();
 }
 mountLabWorkbench();
 syncZoom();if(payload){loadInk();init()}else{
