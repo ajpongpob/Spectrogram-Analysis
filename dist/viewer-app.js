@@ -1,7 +1,7 @@
 'use strict';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=objects-3';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=objects-3';
+import {createSurface} from './surface-3d.mjs?v=objects-4';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=objects-4';
 import {validAnnotation,strokeWidth,objectBounds,hitObject,translateObject} from './annotation-objects.mjs';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();

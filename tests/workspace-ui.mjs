@@ -9,6 +9,7 @@ await fs.mkdir('test-results',{recursive:true});
 try{
  const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true,reducedMotion:'reduce'}),page=await context.newPage(),errors=[],posts=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.method()==='POST')posts.push(r.url())});
+ await page.route('**/i18n.mjs*',async route=>{await new Promise(resolve=>setTimeout(resolve,300));await route.continue()});
  await page.goto(process.env.TEST_URL||'http://127.0.0.1:8954/');await page.locator('[data-language=en]').click();assert.equal(await page.locator('html').getAttribute('lang'),'en');
  await page.screenshot({path:'test-results/landing-en.png'});
  await page.locator('#file-input').setInputFiles({name:'Object study.wav',mimeType:'audio/wav',buffer:wav});await page.waitForFunction(()=>document.querySelector('#percent').textContent==='100%',{timeout:60000});
@@ -52,7 +53,7 @@ try{
  await viewer.locator('#timeGrid').check();await viewer.locator('#lab-button-three').click();await viewer.locator('#reset3d').click();await settle();await page.evaluate(()=>document.querySelector('#viewer-host').scrollIntoView({block:'start'}));await page.screenshot({path:'test-results/grid3d-overlay-en.png'});
  assert.match(await viewer.locator('#status3d').textContent(),/Mesh/);await viewer.locator('#mode2d').click();assert.deepEqual(await saved(),beforeLanguage);
  // Both language choice and objects survive reopening the same audio.
- await page.reload();assert.equal(await page.locator('html').getAttribute('lang'),'en');await page.locator('#file-input').setInputFiles({name:'Object study.wav',mimeType:'audio/wav',buffer:wav});await page.waitForFunction(()=>document.querySelector('#percent').textContent==='100%',{timeout:60000});viewer=page.frames().find(f=>f.url().includes('/viewer.html'));assert.deepEqual(await saved(),beforeLanguage);
+ await page.reload();await page.waitForFunction(()=>document.querySelector('[data-language=en]').disabled===false);assert.equal(await page.locator('html').getAttribute('lang'),'en');await page.locator('#file-input').setInputFiles({name:'Object study.wav',mimeType:'audio/wav',buffer:wav});await page.waitForFunction(()=>document.querySelector('#percent').textContent==='100%',{timeout:60000});viewer=page.frames().find(f=>f.url().includes('/viewer.html'));assert.deepEqual(await saved(),beforeLanguage);
  await page.locator('#change-file').click();await page.locator('#file-input').setInputFiles({name:'bad.wav',mimeType:'audio/wav',buffer:Buffer.from('invalid')});await page.locator('#error').waitFor({state:'visible'});assert.match(await page.locator('#error').textContent(),/decode/);await page.locator('[data-language=th]').click();assert.match(await page.locator('#error').textContent(),/อ่านไฟล์เสียงไม่ได้/);
  assert.deepEqual(errors,[]);assert.deepEqual(posts,[]);
  console.log('PASS: move/delete/copy/paste objects, keyboard shortcuts and field isolation, object property editing, presets, undo/redo, EN/TH live synchronization and persistence, 4 desktop widths, export preservation, visible 3D time/note grid pixels, reload and bilingual errors');

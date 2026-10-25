@@ -24,4 +24,4 @@ export function translate(root=document){
  for(const button of document.querySelectorAll('[data-language]'))button.setAttribute('aria-pressed',String(button.dataset.language===language));
 }
 export function setLanguage(next,persist=true){if(!['th','en'].includes(next))return;const changed=next!==language;language=next;if(persist)try{localStorage.setItem(key,next)}catch{}translate();if(changed)window.dispatchEvent(new CustomEvent('lab-language-change',{detail:{language}}))}
-export function initLanguage(){translate();document.addEventListener('click',e=>{const button=e.target.closest('[data-language]');if(button)setLanguage(button.dataset.language)});window.addEventListener('storage',e=>{if(e.key===key)setLanguage(e.newValue,false)})}
+export function initLanguage(){translate();for(const button of document.querySelectorAll('[data-language]'))button.disabled=false;document.addEventListener('click',e=>{const button=e.target.closest('[data-language]');if(button)setLanguage(button.dataset.language)});window.addEventListener('storage',e=>{if(e.key===key)setLanguage(e.newValue,false)})}

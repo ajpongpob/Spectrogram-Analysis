@@ -1,4 +1,4 @@
-import {t,setText} from './i18n.mjs?v=objects-3';
+import {t,setText} from './i18n.mjs?v=objects-4';
 import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface} from './surface-math.mjs';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
 

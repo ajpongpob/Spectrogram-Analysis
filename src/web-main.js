@@ -1,5 +1,5 @@
 import './lab.css';
-const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=objects-3',document.baseURI).href);
+const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=objects-4',document.baseURI).href);
 const $=id=>document.getElementById(id),drop=$('drop-zone'),input=$('file-input');
 initLanguage();
 let worker,jobId=0,frame,pending;
@@ -38,3 +38,5 @@ drop.onclick=()=>input.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' 
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragging')};drop.ondragleave=()=>drop.classList.remove('dragging');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragging');if(e.dataTransfer.files[0])analyse(e.dataTransfer.files[0])};
 input.onchange=()=>{if(input.files[0])analyse(input.files[0])};$('cancel').onclick=reset;$('change-file').onclick=reset;
 window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
+
+input.disabled=false;drop.removeAttribute('aria-disabled');
