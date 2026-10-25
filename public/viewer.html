@@ -53,7 +53,7 @@ footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18
 .lab-top select{max-width:240px}
 .lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;align-items:start;gap:16px}
 .lab-stage{min-width:0}
-.lab-stage #plot{width:100%;height:clamp(400px,calc(100dvh - 238px),770px);background:#0c0b12;border:1px solid #d2d2d7;border-radius:10px;touch-action:none}
+.lab-stage #plot{width:100%;height:clamp(390px,calc(var(--lab-screen-height,900px) - 270px),740px);background:#0c0b12;border:1px solid #d2d2d7;border-radius:10px;touch-action:none}
 .lab-stage #readout{padding:6px 0;min-height:26px}
 .lab-stage #seek{display:block;margin:3px 0 7px}
 .lab-stage>p.muted{margin:8px 0;color:#6e6e73;font-size:12px;line-height:1.5}
@@ -78,12 +78,12 @@ footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18
 #panel3d>.tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:8px 0;padding:10px 12px;border:1px solid #e5e5ea;border-radius:10px;background:#fff}
 #panel3d>.tools label{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #panel3d>.tools input[type="range"]{width:min(130px,100%)}
-#panel3d>div[style*="position:relative"]{height:clamp(360px,calc(100dvh - 325px),660px)!important;border-color:#d2d2d7!important}
+#panel3d>div[style*="position:relative"]{height:clamp(330px,calc(var(--lab-screen-height,900px) - 415px),650px)!important;border-color:#d2d2d7!important}
 #panel3d>p.muted{font-size:12px;line-height:1.5;margin:8px 0}
 #panel3d #status3d{font-size:12px;line-height:1.5}
 @media(min-width:1080px){
  .lab-sidebar{position:sticky;top:12px}
- .lab-stage #plot{max-height:calc(100dvh - 160px)}
+ .lab-stage #plot{max-height:calc(var(--lab-screen-height,900px) - 160px)}
 }
 @media(max-width:1079px){
  .lab-grid{display:flex;flex-direction:column}
@@ -114,5 +114,5 @@ footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18
 <canvas id="plot" aria-label="Spectrogram พร้อมแกนโน้ตและเวลา"></canvas><div id="readout">คลิกภาพเพื่อเลือกเวลา หรือใช้ปุ่มลากกรอบเพื่อซูม</div><input id="seek" type="range" min="0" max="330" step="0.01" value="15" aria-label="ตำแหน่งเวลา">
 <p class="muted">ความสว่าง linear 0.00–3.00× ขั้นละ 0.01 (ในโหมดขาวดำ ตัวคูณนี้ควบคุมความเข้มของสัญญาณสีดำบนพื้นขาว): คูณความเข้มก่อนแปลงสี ไม่ใช่ dB หรือระดับความดังของเสียง · reference ใช้สูตรสี Saturation 20 / Hue −3 / HueRange 18 และ PeakRange 72 · ค่าเกินช่วงสีอาจอิ่มตัว ลดความสว่างเพื่อดูรายละเอียด · ยังไม่รับรองภาพตรง YouTube ทุกพิกเซล</p><details><summary>วิธีอ่านภาพและข้อมูลสำหรับการอ้างอิง</summary><p>ภาพสีแสดงความเข้มของข้อมูล ShowCQT เดิม ไม่ใช่ค่า dB และไม่ใช่ผลแยกเมโลดีอัตโนมัติ เส้นที่เห็นอาจเป็นเสียงหลัก ฮาร์โมนิก หรือเสียงเครื่องดนตรีอื่น ไม่มีการแก้ระดับเสียงหรือบังคับให้ตรงโน้ต</p><p>ชื่อโน้ตอยู่ที่ความถี่อ้างอิงระบบ 12 เสียงเท่า A4 = 440 Hz กึ่งกลางลิ่มเปียโนตรงกับความถี่โน้ต ขอบลิ่มอยู่ครึ่งเสียงระหว่างโน้ต เมื่อเต็มย่านจะเว้นป้ายชื่อบางตัวเพื่อไม่ให้ทับกัน ซูมเพื่อดูชื่อครบทุกเสียงได้ ข้อมูลกับแกนใช้การแปลงพิกัดเดียวกันเสมอ</p><p>ข้อมูล 960 ช่องความถี่ / 60 ภาพต่อวินาที เก็บค่าความเข้มแบบ Float32 ในหน่วยความจำ พร้อมเล่นเสียงต้นฉบับ การขยายภาพใช้การประมาณค่าเชิงเส้น ไม่เพิ่มความละเอียดของการวิเคราะห์ เสียงที่เลือกเล่นได้จากไฟล์ต้นฉบับในเบราว์เซอร์</p><p>ผู้พัฒนา: ปองภพ สุกิตติวงศ์ · หน้าดูภาพ 0.7 · ยังไม่แทนการตรวจสอบความถี่ด้วยวิธีวิเคราะห์อื่นสำหรับข้อสรุปวิทยานิพนธ์ ระบบวิเคราะห์ทำงานในเครื่อง ไม่ส่งเสียงขึ้นเซิร์ฟเวอร์ หลังจากโหลดหน้าเว็บแล้ว</p></details><footer>ผลวิเคราะห์จากไฟล์ที่เลือก · ประมวลผลในเครื่อง</footer></main>
 
-<script type="module" src="./viewer-app.js?v=desktop-dock-1"></script></html>
+<script type="module" src="./viewer-app.js?v=desktop-dock-2"></script></html>
 

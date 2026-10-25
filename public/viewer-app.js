@@ -120,6 +120,15 @@ const surface=createSurface(()=>samples&&rawEncoding?{samples,peaks,rows:meta.ro
    Retain all existing control IDs, DOM elements, and event listeners. */
 function mountLabWorkbench(){
  const main=canvas.closest('main');
+ // The viewer runs inside a dynamically sized iframe. Use the real outer
+ // browser viewport height rather than iframe-relative vh for the plot.
+ const updateScreenHeight=()=>{
+  let screenHeight=window.innerHeight;
+  try{screenHeight=window.parent.innerHeight||screenHeight}catch{}
+  document.documentElement.style.setProperty('--lab-screen-height',Math.max(550,screenHeight)+'px');
+ };
+ updateScreenHeight();
+ try{window.parent.addEventListener('resize',updateScreenHeight)}catch{window.addEventListener('resize',updateScreenHeight)}
  const tabs=main.querySelector('.view-tabs');
  const groups=[...main.querySelectorAll(':scope > .tools')];
  const panel3d=$('panel3d');
