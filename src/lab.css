@@ -3,3 +3,5 @@
 .drop-zone[aria-disabled=true]{pointer-events:none;cursor:wait}.language-switch button:disabled{opacity:.4;cursor:wait}
 
 body.viewer-expanded{overflow:hidden}.viewer-expanded #viewer-host iframe{position:fixed;inset:0;z-index:10000;width:100vw;height:100dvh!important;border:0;border-radius:0}
+
+.version-badge{font-size:10px;font-weight:500;letter-spacing:0;color:#6e737d;vertical-align:middle;padding:2px 5px;border:1px solid #e5e5e9;border-radius:5px;white-space:nowrap}

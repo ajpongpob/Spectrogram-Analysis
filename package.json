@@ -1,7 +1,7 @@
 {
   "name": "showcqt-musical-detail-web",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,8 @@
     "test:annotations": "node tests/annotations-ui.mjs",
     "test:objects": "node tests/annotation-objects.mjs",
     "test:workspace": "node tests/workspace-ui.mjs",
-    "test:shapes": "node tests/shapes-fullscreen-ui.mjs"
+    "test:shapes": "node tests/shapes-fullscreen-ui.mjs",
+    "test:v07": "node tests/v07-3d-ui.mjs"
   },
   "dependencies": {
     "@digitaldefiance/bzip2-wasm": "^1.1.1"

@@ -56,7 +56,7 @@ try{
   assert(layout.plotRight<layout.asideLeft);assert.equal(layout.panelTop,layout.headingBottom);assert.equal(layout.position,'static');assert.equal(layout.overflow,false);
   await page.evaluate(()=>document.querySelector('#viewer-host').scrollIntoView({block:'start'}));await page.screenshot({path:`test-results/annotation-desktop-${width}.png`});
  }
- await viewer.locator('#mode3d').click();await viewer.locator('#lab-panel-three').waitFor({state:'visible'});await viewer.locator('#pitch3d').fill('35');await viewer.locator('#pitch3d').dispatchEvent('input');assert.equal(await viewer.locator('#pitchAngleOut').textContent(),'35°');
+ await viewer.locator('#mode3d').click();await viewer.locator('#lab-button-three').click();await viewer.locator('#lab-panel-three').waitFor({state:'visible'});await viewer.locator('#pitch3d').fill('35');await viewer.locator('#pitch3d').dispatchEvent('input');assert.equal(await viewer.locator('#pitchAngleOut').textContent(),'35°');
  await viewer.locator('#mode2d').click();await viewer.locator('#lab-panel-colors').waitFor({state:'visible'});assert.equal(await count(),2);
  assert.deepEqual(errors,[]);console.log('PASS: persistent accordion at three desktop sizes; fractional strokes; Thai/multiline text, keyboard input, undo/redo, time/pitch anchoring, reload persistence, PNG pixels and 2D/3D switching');
 }finally{await browser.close()}

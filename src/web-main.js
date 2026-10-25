@@ -1,5 +1,5 @@
 import './lab.css';
-const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=shapes-1',document.baseURI).href);
+const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=0.7',document.baseURI).href);
 const $=id=>document.getElementById(id),drop=$('drop-zone'),input=$('file-input');
 initLanguage();
 let worker,jobId=0,frame,pending;

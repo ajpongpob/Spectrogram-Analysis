@@ -25,3 +25,21 @@ for(const aspect of [.8,1.6,2.4])for(const yaw of [0,45,120,270,325]){
  for(const point of points){const p=project(point,yaw,55,7,aspect),screen=[(p[0]-fit.x)*fit.scale,(p[1]-fit.y)*fit.scale];assert(Math.abs(screen[0])<=.900001);assert(Math.abs(screen[1])<=.880001);assert(Math.abs(screen[0]/fit.scale+fit.x-p[0])<1e-10)}
 }
 console.log('PASS: scene fit across viewport ratios and rotations with reversible screen coordinates');
+const {unprojectPlane,meshRawAt}=await import('../public/surface-math.mjs');
+let inversions=0;
+for(const aspect of [.8,1.7,2.4])for(const yaw of [0,45,90,135,180,225,270,325])for(const pitch of [-85,-40,0,55,85])for(const distance of [4,7,12])for(const z of [-.6,0,1.4,3.4]){
+ for(const point of [[-1.7,-1.2,z],[.3,.2,z],[1.8,1.4,z]]){
+  const p=project(point,yaw,pitch,distance,aspect),back=unprojectPlane(p,z,yaw,pitch,distance,aspect);
+  if(p[2]<=.1){assert.equal(back,null);continue}
+  assert(back);back.forEach((n,i)=>assert(Math.abs(n-point[i])<1e-8));inversions++;
+ }
+}
+const layers=[[-1,-1,0],[1,-1,0],[0,1,0],[-1,-1,1],[1,-1,1],[0,1,1]];
+assert.equal(pickSurface(layers,[0,1,2,3,4,5],[0,0],0,0,7,1.5)[2],1,'Nearest visible surface wins');
+assert.equal(mesh.frames[mesh.values.indexOf(2)],300,'Peak emphasis must use the source time of the aggregate maximum');
+const plane={nx:2,ny:2,values:Float32Array.from([0,1,2,6])};
+assert(Math.abs(meshRawAt(plane,-.5,-.375)-.75)<1e-8);
+assert(Math.abs(meshRawAt(plane,.5,.375)-2.25)<1e-8);
+assert.equal(meshRawAt(plane,2,1.5),3,'Interpolation uses clipped vertex heights');
+const copy=samples.slice();meshSamples(samples,600,{start:2,span:4,lo:30,hi:80});assert.deepEqual(samples,copy,'3D aggregation cannot mutate CQT');
+console.log(`PASS: ${inversions} inverse projections, nearest-depth selection, triangle height interpolation, exact peak source frame, immutable CQT`);

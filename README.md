@@ -1,4 +1,8 @@
-# ShowCQT Musical Detail Web
+# MuSpec Lab V0.7
+
+Browser-based 2D/3D audio analysis with shared editable annotations and clickable reference piano keys. The current web workspace is documented in [WEB-VIEWER.md](WEB-VIEWER.md); see [3D behavior and accuracy](docs/3D-VIEWER.md).
+
+## Legacy Sonic Visualiser exporter
 
 Static, client-side web application for converting MP3/WAV files into portable
 Sonic Visualiser `.sv` sessions containing the Musical Detail v2.1

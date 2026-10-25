@@ -1,8 +1,10 @@
 'use strict';
+import {drawAnnotations} from './annotation-render.mjs?v=0.7';
+import {playReferenceNote} from './piano-reference.mjs?v=0.7';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=shapes-1';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=shapes-1';
-import {validAnnotation,strokeWidth,strokeTypes,arrowGeometry,trianglePoints,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=shapes-1';
+import {createSurface} from './surface-3d.mjs?v=0.7';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=0.7';
+import {validAnnotation,strokeWidth,strokeTypes,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=0.7';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
 const LEFT=108,TOP=12,BOTTOM=30,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -66,9 +68,10 @@ function pasteObject(){
  if(!objectClipboard||!samples)return;manual();audio.pause();
  const a=structuredClone(objectClipboard),anchor=projectPoint(a.points[0]);
  const inView=anchor.x>=LEFT&&anchor.x<W-36&&anchor.y>=TOP&&anchor.y<H-BOTTOM-36;
- const dt=inView?18/(W-LEFT)*span:start+span*.25-a.points[0].t;
- const dm=inView?-18/(H-TOP-BOTTOM)*(hi-lo):hi-(hi-lo)*.25-a.points[0].m;
- const item=translateObject(a,dt,dm,meta.duration);setMode('select');editInk([...annotations,item],{selection:annotations.length});canvas.focus({preventScroll:true});
+ let dt=inView?18/(W-LEFT)*span:start+span*.25-a.points[0].t;
+ let dm=inView?-18/(H-TOP-BOTTOM)*(hi-lo):hi-(hi-lo)*.25-a.points[0].m;
+ if(!$('panel3d').hidden){a.points=surface.anchorObject(a).points;({dt,dm}=surface.pasteOffset(a.points[0]))}
+ const item=translateObject(a,dt,dm,meta.duration);setMode('select');editInk([...annotations,item],{selection:annotations.length});($('panel3d').hidden?canvas:$('surface3d')).focus({preventScroll:true});
 }
 $('copyObject').onclick=copyObject;$('pasteObject').onclick=pasteObject;$('deleteObject').onclick=deleteObject;
 for(const [name,color] of [['ink','#1d1d1f'],['paper','#ffffff'],['coral','#ef4444'],['amber','#f59e0b'],['mint','#10b981'],['sky','#0ea5e9'],['violet','#8b5cf6'],['rose','#ec4899']]){
@@ -80,28 +83,7 @@ $('annotationText').onchange=()=>{const text=$('annotationText').value.trim().sl
 annotationControls();
 function drawInk(g,v,w,h,list){
  g.save();g.beginPath();g.rect(LEFT,TOP,w-LEFT,h-TOP-BOTTOM);g.clip();
- for(const a of list){
-  g.save();const p=a.points.map(p=>({x:xAt(p.t,v,w),y:yAt(p.m,v,h)}));
-  if(a.type==='text'){
-   g.fillStyle=a.color;g.font=`${a.fontSize}px system-ui, sans-serif`;g.textAlign='left';g.textBaseline='top';
-   a.text.split('\n').forEach((line,i)=>g.fillText(line,p[0].x,p[0].y+i*a.fontSize*1.45));
-  }else{
-   // Older saved highlights used a sixfold width multiplier.
-   g.strokeStyle=a.color;g.lineWidth=strokeWidth(a);
-   g.lineCap='round';g.lineJoin='round';g.globalAlpha=a.type==='highlight'?.3:1;g.beginPath();
-   if(['arrow','doubleArrow'].includes(a.type)){
-    const {shaft,heads}=arrowGeometry(a,point=>({x:xAt(point.t,v,w),y:yAt(point.m,v,h)}));
-    g.moveTo(shaft[0].x,shaft[0].y);g.lineTo(shaft[1].x,shaft[1].y);g.stroke();g.fillStyle=a.color;
-    for(const head of heads){g.beginPath();g.moveTo(head[0].x,head[0].y);for(const point of head.slice(1))g.lineTo(point.x,point.y);g.closePath();g.fill()}
-   }else{
-    if(a.type==='rect')g.rect(p[0].x,p[0].y,p[1].x-p[0].x,p[1].y-p[0].y);
-    else if(a.type==='ellipse')g.ellipse((p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2,Math.abs(p[1].x-p[0].x)/2,Math.abs(p[1].y-p[0].y)/2,0,0,Math.PI*2);
-    else if(a.type==='triangle'){const vertices=trianglePoints(a,point=>({x:xAt(point.t,v,w),y:yAt(point.m,v,h)}));g.moveTo(vertices[0].x,vertices[0].y);for(const point of vertices.slice(1))g.lineTo(point.x,point.y);g.closePath()}
-    else{g.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)g.lineTo(p[i].x,p[i].y)}g.stroke();
-   }
-  }
-  g.restore();
- }
+ drawAnnotations(g,list,p=>({x:xAt(p.t,v,w),y:yAt(p.m,v,h)}));
  g.restore();
 }
 function setPenWidth(value){
@@ -160,13 +142,13 @@ $('timeFormat').onchange=syncZoom;
 $('span').onchange=()=>{const s=+$('span').value;setTime(audio.currentTime-s*.25,s);syncZoom()};
 $('range').onchange=()=>{const [a,b]=$('range').value.split(',').map(Number);setPitch(a,b-a);syncZoom()};
 $('seek').max=meta.duration;$('seek').oninput=()=>{audio.currentTime=+$('seek').value;position(audio.currentTime)};
-function cancelDrag(){if(drag?.mode==='move')annotations=drag.before;drag=null;dirty=true}
+function cancelDrag(){if(drag?.mode==='move')annotations=drag.before;drag=null;dirty=true;surface.cancelAnnotation()}
 function setMode(name){
  cancelDrag();modeName=name;
  for(const [id,m] of [['boxZoom','zoom'],['capture','capture']]){$(id).setAttribute('aria-pressed',String(name===m));$(id).style.background=name===m?'#1d1d1f':'';$(id).style.color=name===m?'#fff':''}
  if(['pan',...annotationModes].includes(name))$('tool').value=name;
  if(name!=='select')selectedIndex=-1;
- canvas.style.cursor=name==='pan'?'grab':name==='text'?'text':name==='select'?'default':'crosshair';syncSelection();overlay();
+ canvas.style.cursor=name==='pan'?'grab':name==='text'?'text':name==='select'?'default':'crosshair';syncSelection();overlay();surface.repaint();
 }
 $('tool').onchange=()=>setMode($('tool').value);$('boxZoom').onclick=()=>setMode(modeName==='zoom'?'pan':'zoom');$('capture').onclick=()=>{manual();audio.pause();setMode(modeName==='capture'?'pan':'capture')};
 function point(e,full=false){const r=canvas.getBoundingClientRect();return {x:clamp((e.clientX-r.left)*W/r.width,full?0:LEFT,W),y:clamp((e.clientY-r.top)*H/r.height,full?0:TOP,full?H:H-BOTTOM)}}
@@ -175,6 +157,7 @@ function hitIndex(p){for(let i=annotations.length-1;i>=0;i--)if(hitObject(annota
 function draft(d){const pts=d.mode==='highlight'?d.points:[dataPoint({x:d.x,y:d.y},d.view),dataPoint({x:d.endX,y:d.endY},d.view)];return {type:d.mode,color:d.color,width:d.width,strokePixels:true,points:pts}}
 canvas.onpointerdown=e=>{
  if(!samples||e.button!==0||drag)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+ if(modeName!=='capture'&&x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){referenceKey(clamp(Math.round(pAt(y,view(),H)),16,135));return}
  if(modeName!=='capture'&&(x<LEFT||y<TOP||y>H-BOTTOM))return;
  const p=point(e,modeName==='capture');
  if(modeName==='text'&&!$('annotationText').value.trim()){setText($('toolHint'),'emptyText');$('annotationText').focus();return}
@@ -187,6 +170,8 @@ canvas.onpointerdown=e=>{
  canvas.setPointerCapture(e.pointerId);
 };
 canvas.onpointermove=e=>{
+ if(!drag&&modeName!=='capture'){const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){canvas.style.cursor='pointer';return}}
+ if(!drag)canvas.style.cursor=modeName==='pan'?'grab':modeName==='text'?'text':modeName==='select'?'default':'crosshair';
  const p=point(e,drag?.mode==='capture');
  if(!drag){if(p.x>LEFT)setText($('readout'),'readout',{time:formatTime(tAt(p.x,view(),W)),hz:hz(pAt(p.y,view(),H)).toFixed(2),note:note(Math.round(pAt(p.y,view(),H)))});if(modeName==='select')canvas.style.cursor=hitIndex(p)>=0?'move':'default';return}
  const d=drag;
@@ -215,7 +200,7 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Escape'&&isExpanded()){if(!document.fullscreenElement)leaveFullscreen();return}
  if(editingField(e))return;
  if(e.key==='Escape'){cancelDrag();selectedIndex=-1;setMode(annotationModes.includes(modeName)?'select':'pan');invalidateCapture();return}
- if(!annotationModes.includes(modeName)||!$('panel3d').hidden||drag)return;
+ if(!annotationModes.includes(modeName)||drag||surface.annotating)return;
  const command=e.metaKey||e.ctrlKey,key=e.key.toLowerCase();
  if(command&&key==='c'&&selectedIndex>=0){e.preventDefault();copyObject()}
  else if(command&&key==='v'&&objectClipboard){e.preventDefault();pasteObject()}
@@ -241,7 +226,20 @@ audio.addEventListener('pause',()=>{$('seek').value=audio.currentTime;overlay()}
 async function init(){try{sourceName=document.querySelector('h1')?.textContent||sourceName;const packed=bytes(meta.data);meta.data='';const buf=await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();samples=new Float32Array(buf);if(samples.length!==meta.rows*960)throw Error(t('dataError'));audio.src=URL.createObjectURL(new Blob([bytes(meta.audio)],{type:'audio/mpeg'}));meta.audio='';audio.addEventListener('loadedmetadata',()=>{audio.currentTime=15},{once:true});setText($('status'),'ready');resize();requestAnimationFrame(tick)}catch(e){setText($('status'),'errorDetail',{message:e.message})}}
 function tick(){let moved=false;if(!audio.paused&&Math.abs(audio.currentTime-lastPlay)>.04){if($('follow').checked&&(audio.currentTime>start+span*.85||audio.currentTime<start))position(audio.currentTime);$('seek').value=audio.currentTime;lastPlay=audio.currentTime;moved=true}if(dirty)render();else if(moved)overlay();surface.frame();requestAnimationFrame(tick)}
 window.viewerTest={binPitch,pitchBin,hz,note,yForPitch,pitchForY,formatTime,get state(){return {...view(),rows:meta.rows,ready:!!samples,annotations:annotations.length}},sample:(frame,bin)=>samples[frame*960+bin]};
-const surface=createSurface(()=>samples&&rawEncoding?{samples,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
+async function referenceKey(midi){
+ try{const result=await playReferenceNote(midi);if(result)setText($('pianoFeedback'),'pianoPlaying',{note:note(midi),hz:result.frequency.toFixed(2)})}
+ catch{setText($('pianoFeedback'),'pianoUnavailable')}
+}
+const annotationBridge={
+ get mode(){return modeName},get items(){return annotations},get selection(){return selectedIndex},
+ get style(){return {color:$('ink').value,width:+$('penWidth').value,strokePixels:true,text:$('annotationText').value.trim().slice(0,240),fontSize:Math.round(clamp($('textSize').valueAsNumber||20,8,96))}},
+ select(index){selectedIndex=index;syncSelection();dirty=true},commit:editInk,setMode,
+ pause(){manual();audio.pause();invalidateCapture()},
+ emptyText(){setText($('toolHint'),'emptyText');$('annotationText').focus()},
+ miss(){setText($('toolHint'),'annotation3dMiss')}
+};
+const surface=createSurface(()=>samples&&rawEncoding?{annotation:annotationBridge,playReference:referenceKey,samples,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
+window.viewerTest.surface=()=>surface.inspect();
 function isExpanded(){return !!document.fullscreenElement||$('lab-stage')?.classList.contains('expanded')}
 async function leaveFullscreen(){
  if(document.fullscreenElement)await document.exitFullscreen();
@@ -281,7 +279,9 @@ function mountLabWorkbench(){
  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)fullscreenButton.focus({preventScroll:true})});
  top.append(quick);zoom.querySelectorAll('strong').forEach(el=>el.remove());
  const axes=document.createElement('div');axes.className='tools';axes.dataset.i18nAria='axes';
- for(const id of ['axis','timeFormat','noteGrid','timeGrid'])axes.append($(id).closest('label'));
+ for(const id of ['axis','axisSide3d','timeFormat','noteGrid','timeGrid'])axes.append($(id).closest('label'));
+ const pianoHelp=document.createElement('p');pianoHelp.id='pianoFeedback';pianoHelp.className='muted';pianoHelp.setAttribute('role','status');pianoHelp.dataset.i18n='pianoHint';axes.append(pianoHelp);
+ const ink3dHint=document.createElement('p');ink3dHint.id='ink3dHint';ink3dHint.className='muted';ink3dHint.dataset.i18n='annotation3dHint';annotation.append(ink3dHint);
  appearance.append(gainLabel,gainNumber);
  const controls3d=[...panel3d.querySelectorAll(':scope > .tools')];
  if(controls3d.length!==1)throw Error('Missing 3D controls');
@@ -316,14 +316,14 @@ function mountLabWorkbench(){
   e.preventDefault();const visible=[...buttons].filter(([id])=>!sections.get(id).hidden).map(([,button])=>button);
   const cur=visible.indexOf(e.target),i=e.key==='Home'?0:e.key==='End'?visible.length-1:(cur+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length;visible[i]?.focus();
  });
- const sync=()=>{const is3d=!panel3d.hidden;for(const id of ['draw','export'])sections.get(id).hidden=is3d;sections.get('three').hidden=!is3d;if(active&&sections.get(active).hidden)select(is3d?'three':'colors')};
+ const sync=()=>{const is3d=!panel3d.hidden;sections.get('export').hidden=is3d;sections.get('three').hidden=!is3d;$('axisSide3d').closest('label').hidden=!is3d;ink3dHint.hidden=!is3d;if(active&&sections.get(active).hidden)select(is3d?'three':'colors')};
  new MutationObserver(sync).observe(panel3d,{attributes:true,attributeFilter:['hidden']});sync();
 }
 mountLabWorkbench();
 initLanguage();syncSelection();
 window.addEventListener('lab-language-change',()=>{syncSelection(false);syncZoom(false);surface.update()});
 syncZoom();if(payload){loadInk();init()}else{
- window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;sourceName=d.name||sourceName;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error(t('dataError'));if(samples.length!==meta.rows*960)throw Error(t('dataError'));storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · Musical Detail';setText($('status'),'ready');syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
+ window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;sourceName=d.name||sourceName;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error(t('dataError'));if(samples.length!==meta.rows*960)throw Error(t('dataError'));storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · MuSpec Lab V0.7';setText($('status'),'ready');syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
  new ResizeObserver(()=>parent.postMessage({type:'viewer-height',height:document.body.scrollHeight},location.origin)).observe(document.body);
  parent.postMessage({type:'viewer-listening'},location.origin);
 }

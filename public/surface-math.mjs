@@ -34,15 +34,15 @@ export function meshIndices(nx,ny){
 }
 // Maximum aggregation preserves short/narrow events in the limited preview mesh.
 export function meshSamples(samples,rows,v,nx=160,ny=320){
- const values=new Float32Array(nx*ny),bins=new Float32Array(nx*ny);
+ const values=new Float32Array(nx*ny),bins=new Float32Array(nx*ny),frames=new Uint32Array(nx*ny);
  for(let x=0;x<nx;x++)for(let y=0;y<ny;y++){
   const ta=clamp(Math.floor((v.start+v.span*x/nx)*60),0,rows-1),tb=clamp(Math.ceil((v.start+v.span*(x+1)/nx)*60),ta+1,rows);
   const ba=clamp(Math.floor((v.lo+(v.hi-v.lo)*y/ny-15.5)*8),0,959),bb=clamp(Math.ceil((v.lo+(v.hi-v.lo)*(y+1)/ny-15.5)*8),ba+1,960);
-  let max=0,best=ba;
-  for(let t=ta;t<tb;t++)for(let b=ba;b<bb;b++){const n=samples[t*960+b];if(n>max){max=n;best=b}}
-  values[x*ny+y]=max;bins[x*ny+y]=best;
+  let max=0,best=ba,bestFrame=ta;
+  for(let t=ta;t<tb;t++)for(let b=ba;b<bb;b++){const n=samples[t*960+b];if(n>max){max=n;best=b;bestFrame=t}}
+  values[x*ny+y]=max;bins[x*ny+y]=best;frames[x*ny+y]=bestFrame;
  }
- return {values,bins,nx,ny};
+ return {values,bins,frames,nx,ny};
 }
 // Fit a projected scene while retaining its perspective and data coordinates.
 export function fitFrame(points,yaw,pitch,distance,aspect){
@@ -50,4 +50,27 @@ export function fitFrame(points,yaw,pitch,distance,aspect){
  for(const point of points){const [x,y,depth]=project(point,yaw,pitch,distance,aspect);if(depth<=0)continue;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
  if(!Number.isFinite(minX))return {scale:1,x:0,y:0};
  return {scale:Math.min(1.8/Math.max(.01,maxX-minX),1.76/Math.max(.01,maxY-minY)),x:(minX+maxX)/2,y:(minY+maxY)/2};
+}
+
+// Exact inverse projection onto a constant-intensity plane, also used for dragging.
+export function unprojectPlane(screen,z,yaw,pitch,distance,aspect){
+ const a=yaw*Math.PI/180,b=pitch*Math.PI/180,f=1/Math.tan(Math.PI/8),sx=screen[0]*aspect/f,sy=screen[1]/f;
+ const den=Math.cos(b)-sy*Math.sin(b);if(Math.abs(den)<1e-5)return null;
+ const v=(sy*distance-z*(Math.sin(b)+sy*Math.cos(b)))/den,depth=distance+Math.sin(b)*v-Math.cos(b)*z;
+ if(depth<=.1||!Number.isFinite(depth)||Math.abs(v)>100)return null;
+ const u=sx*depth;return [Math.cos(a)*u+Math.sin(a)*v,-Math.sin(a)*u+Math.cos(a)*v,z];
+}
+// Interpolate the same two triangles per cell that WebGL renders (not bilinear).
+export function meshRawAt(mesh,x,y){
+ const {nx,ny,values}=mesh,gx=clamp((x+2)/4*nx-.5,0,nx-1),gy=clamp((y+1.5)/3*ny-.5,0,ny-1);
+ const ix=Math.min(nx-2,Math.floor(gx)),iy=Math.min(ny-2,Math.floor(gy)),u=gx-ix,v=gy-iy,i=ix*ny+iy;
+ const a=clamp(values[i],0,3),b=clamp(values[i+ny],0,3),c=clamp(values[i+1],0,3),d=clamp(values[i+ny+1],0,3);
+ return clamp(u+v<=1?a*(1-u-v)+b*u+c*v:d*(u+v-1)+b*(1-v)+c*(1-u),0,3);
+}
+export function insidePolygon(p,vertices){
+ let inside=false;
+ for(let i=0,j=vertices.length-1;i<vertices.length;j=i++){
+  const a=vertices[i],b=vertices[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)inside=!inside;
+ }
+ return inside;
 }

@@ -17,3 +17,5 @@ const oval={...line,type:'ellipse',points:[{t:1,m:60},{t:3,m:40}]};assert(hitObj
 assert(hitObject({...oval,type:'triangle'},{x:200,y:520},project,measure));assert(!hitObject({...oval,type:'triangle'},{x:105,y:405},project,measure));
 assert(arrowGeometry({...arrow,points:[{t:1,m:60},{t:1.01,m:60}]},project).heads.flat().every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));
 console.log('PASS: arrowheads, double arrows, ellipse/triangle hit areas and short-arrow geometry');
+const spatial={...line,points:line.points.map(p=>({...p,h:1.25}))};assert(validAnnotation(spatial));assert(translateObject(spatial,.2,1,10).points.every(p=>p.h===1.25));assert(!validAnnotation({...line,points:[{t:1,m:60,h:NaN},{t:2,m:60}]}));
+console.log('PASS: 3D intensity anchors validate and survive object movement');

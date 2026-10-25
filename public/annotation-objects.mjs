@@ -1,7 +1,7 @@
 export const strokeTypes=['rect','line','highlight','arrow','doubleArrow','ellipse','triangle'];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function validAnnotation(a){
- if(!a||![...strokeTypes,'text'].includes(a.type)||!/^#[0-9a-f]{6}$/i.test(a.color)||!Array.isArray(a.points)||!a.points.length||!a.points.every(p=>p&&Number.isFinite(p.t)&&Number.isFinite(p.m)))return false;
+ if(!a||![...strokeTypes,'text'].includes(a.type)||!/^#[0-9a-f]{6}$/i.test(a.color)||!Array.isArray(a.points)||!a.points.length||!a.points.every(p=>p&&Number.isFinite(p.t)&&Number.isFinite(p.m)&&(p.h===undefined||(Number.isFinite(p.h)&&p.h>=0&&p.h<=3))))return false;
  if(a.type==='text')return a.points.length===1&&typeof a.text==='string'&&a.text.trim().length>0&&a.text.length<=240&&Number.isFinite(a.fontSize)&&a.fontSize>=8&&a.fontSize<=96;
  return Number.isFinite(a.width)&&a.width>0&&a.points.length>=2;
 }
@@ -48,5 +48,5 @@ export function hitObject(a,point,project,measure){
 export function translateObject(a,dt,dm,duration){
  const b=a.points.reduce((b,p)=>({minT:Math.min(b.minT,p.t),maxT:Math.max(b.maxT,p.t),minM:Math.min(b.minM,p.m),maxM:Math.max(b.maxM,p.m)}),{minT:Infinity,maxT:-Infinity,minM:Infinity,maxM:-Infinity});
  dt=clamp(dt,-b.minT,duration-b.maxT);dm=clamp(dm,15.5-b.minM,135.5-b.maxM);
- return {...a,points:a.points.map(p=>({t:p.t+dt,m:p.m+dm}))};
+ return {...a,points:a.points.map(p=>({...p,t:p.t+dt,m:p.m+dm}))};
 }

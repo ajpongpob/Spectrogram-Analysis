@@ -1,4 +1,4 @@
-# Web Viewer 0.6
+# MuSpec Lab V0.7
 
 Drop an MP3 or WAV into the main page to analyse and explore it in the browser.
 The worker returns transferable Float32 CQT data directly to the viewer. Audio
@@ -45,3 +45,9 @@ With the development server running, `pnpm test:annotations` verifies the browse
 - 3D automatically fits the scene to its frame and supports a left/right piano axis, with note/Hz labels spaced to avoid collisions. Alt+wheel adjusts the display zoom.
 
 With the built site served locally, `pnpm test:shapes` checks new shape creation and editing, Shift-constrained circles, export, persistence, native/fallback fullscreen, pitch-axis placement and accurate picking on the fitted 3D scene.
+
+## V0.7
+
+The Axes & grid section contains 3D pitch-axis placement. Annotate now works in both 2D and 3D with shared objects, history and persistence. 3D objects retain time/pitch and drawing-plane intensity anchors; PNG exports include them. Clicking piano keys in either mode plays an equal-tempered, synthesized piano-like reference tone for that register, without changing playback position. Both the landing page and workspace display V0.7.
+
+`pnpm test:v07` exercises these features, the actual analysis worker at three reference pitches, projection/picking across camera settings, browser audio waveforms, fullscreen, and export pixels. See `docs/3D-VIEWER.md` for annotation geometry and the accuracy review.
