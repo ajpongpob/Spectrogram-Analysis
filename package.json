@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:pitch": "node tests/pitch-calibration.mjs && node tests/axis-labels.mjs",
-    "test:reference": "node tests/reference-color.mjs"
+    "test:reference": "node tests/reference-color.mjs",
+    "test:3d": "node tests/surface-3d.mjs"
   },
   "dependencies": {
     "@digitaldefiance/bzip2-wasm": "^1.1.1"
