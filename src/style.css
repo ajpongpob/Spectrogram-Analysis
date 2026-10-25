@@ -28,3 +28,57 @@
 .shell { width: min(1500px, calc(100% - 48px)); }
 #job { padding: 24px; }
 #viewer-host { margin: 24px 0; }
+
+/* MuSpec Lab light interface — spectrogram canvas retains its existing colors. */
+:root{color-scheme:light;--lab-bg:#fff;--lab-surface:#f5f5f7;--lab-border:#e5e5ea;--lab-text:#1d1d1f;--lab-muted:#6e6e73;--lab-accent:#0066cc;color:var(--lab-text);background:var(--lab-bg)}
+body{color:var(--lab-text);background:var(--lab-bg)}
+.shell{width:min(1500px,calc(100% - 64px));padding:42px 0 60px}
+.masthead{display:block;margin-bottom:28px;padding-bottom:26px;border-bottom:1px solid var(--lab-border)}
+.masthead h1{color:var(--lab-text);font-size:clamp(38px,5.5vw,58px);font-weight:650;line-height:1.09;letter-spacing:-.045em}
+.lede{max-width:900px;color:var(--lab-muted);font-size:clamp(14px,1.5vw,17px);line-height:1.65;margin-top:12px}
+.workspace{background:var(--lab-surface);border:1px solid var(--lab-border);border-radius:20px;box-shadow:none}
+.drop-zone{min-height:240px;padding:36px 22px;transition:background-color .18s,box-shadow .18s}
+.drop-zone:hover,.drop-zone:focus,.drop-zone.dragging{background:#eeeef1;box-shadow:inset 0 0 0 2px #b2b2b7}
+.drop-zone:focus-visible{outline:2px solid var(--lab-accent);outline-offset:3px}
+.drop-zone h2{color:var(--lab-text);font-size:clamp(20px,2.5vw,25px);font-weight:600}
+.drop-zone p,.meta,.label{color:var(--lab-muted)}
+.privacy-pill{color:#424245;background:#fff;border:1px solid #d2d2d7;font-size:12px}
+.job,.job h2{color:var(--lab-text)}
+.quiet-button,.primary-button{border-radius:11px;padding:10px 16px;box-shadow:none}
+.quiet-button{background:#fff;color:var(--lab-text);border:1px solid #d2d2d7}
+.quiet-button:hover{background:#e8e8ed}
+.primary-button{background:var(--lab-text);color:#fff;border:1px solid var(--lab-text)}
+.primary-button:hover{background:#424245}
+.quiet-button:focus-visible,.primary-button:focus-visible,.info-nav a:focus-visible{outline:2px solid var(--lab-accent);outline-offset:3px}
+.meter{height:6px;background:#e2e2e7}
+.meter div{background:#1d1d1f;box-shadow:none}
+.status-line{color:var(--lab-muted)}
+.status-line strong{color:var(--lab-text)}
+.error{color:#b42318;background:#fff7f6;border:1px solid #ffd5d1}
+.facts article{background:#fff;border:1px solid var(--lab-border);box-shadow:none}
+.facts span{color:var(--lab-text)}
+.facts p{color:var(--lab-muted)}
+.brand-mark{background:var(--lab-surface);border-color:var(--lab-border);box-shadow:none}
+.brand-mark i{background:var(--lab-text);box-shadow:none}
+.eyebrow{color:var(--lab-muted)}
+.result{background:#fff;border:1px solid var(--lab-border)}
+.result-copy .check{background:var(--lab-text);color:#fff}
+.result-copy small{color:var(--lab-muted)}
+.howto{border-top:1px solid var(--lab-border);color:#424245}
+.howto summary,.howto code{color:var(--lab-text)}
+.project-info{background:#fff;color:#424245;border:0;border-top:1px solid var(--lab-border);border-radius:0;padding:32px 0;line-height:1.85}
+.project-info h2,.project-info h3{color:var(--lab-text)}
+.project-info .project-byline{color:var(--lab-muted)}
+.project-info section{border-top:1px solid var(--lab-border)}
+.project-info a{color:var(--lab-accent)}
+.project-info a:hover{color:#004a99}
+.project-info a:focus-visible{outline-color:var(--lab-accent)}
+.info-nav a{color:var(--lab-text);background:var(--lab-surface);border:1px solid var(--lab-border);border-radius:999px}
+.info-nav a:hover{background:#e8e8ed}
+.analysis-specs>div{border-bottom:1px solid var(--lab-border)}
+.analysis-specs dt{color:var(--lab-text)}
+.project-info blockquote{background:var(--lab-surface);border-left:3px solid #a1a1aa}
+footer{color:var(--lab-muted)}
+#viewer-host iframe{background:#fff;border:1px solid var(--lab-border);border-radius:16px;box-shadow:none}
+@media(max-width:720px){.shell{width:calc(100% - 28px);padding:26px 0 34px}.masthead{margin-bottom:20px;padding-bottom:19px}.drop-zone{min-height:206px;padding:28px 14px}.project-info{padding:24px 0}#viewer-host{margin:16px 0}#viewer-host iframe{border-radius:10px}}
+@media(prefers-reduced-motion:reduce){.drop-zone,.meter div{transition:none}}

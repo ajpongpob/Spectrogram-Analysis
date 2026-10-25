@@ -1,13 +1,51 @@
-<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Musical Detail · Musical Detail</title>
+<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MuSpec Lab · Spectrogram Viewer</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0c0b12;color:#eeeaf8;font:14px system-ui,sans-serif}header{padding:20px 26px 10px;display:flex;align-items:center;justify-content:space-between;gap:15px}h1{font-size:23px;margin:0}small,.muted{color:#aaa3bb}main{padding:0 26px 24px}.tools{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:14px 0}select,button{background:#262231;color:#fff;border:1px solid #51455f;border-radius:7px;padding:8px}audio{height:36px;width:min(460px,100%)}#plot{width:100%;height:max(650px,calc(100vh - 290px));display:block;border:1px solid #3b314b;border-radius:8px;touch-action:none}#seek{width:100%;accent-color:#bd8bff}#readout{min-height:26px;padding:5px;color:#d4c2f3}details{margin-top:14px;color:#b5acc4;max-width:1000px}summary{cursor:pointer}#status{color:#ffcc8e}label{display:flex;align-items:center;gap:6px}footer{margin-top:15px;color:#9c91ac;font-size:12px}@media(max-width:650px){main{padding:0 10px}header{padding:15px 10px}#plot{height:750px}h1{font-size:18px}}
 #plot{height:720px}h1{overflow-wrap:anywhere}
 [hidden]{display:none!important}.view-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 0;border-bottom:1px solid #51455f;margin-bottom:18px}.view-tabs button{font-size:16px;padding:12px 22px;cursor:pointer}.view-tabs button[aria-selected="true"]{background:#7044aa;border-color:#d2aaff;box-shadow:0 0 0 1px #d2aaff;font-weight:700}.view-tabs button:focus-visible{outline:3px solid #fff;outline-offset:3px}#modeHint{color:#bcb0cb;font-size:13px}
+
+/* MuSpec Lab white research UI; original ShowCQT 2D/3D image colors untouched. */
+:root{color-scheme:light}
+body{background:#fff;color:#1d1d1f;font:14px system-ui,-apple-system,'Noto Sans Thai',sans-serif}
+header{background:#fff;border-bottom:1px solid #e5e5ea;padding:22px 26px 18px;gap:12px}
+header h1{color:#1d1d1f;font-size:23px;line-height:1.3;letter-spacing:-.025em}
+header small{display:block;color:#6e6e73;font-size:11px;font-weight:600;letter-spacing:.07em;margin-bottom:5px}
+main{background:#fff;padding:4px 26px 28px}
+.muted,small{color:#6e6e73}
+main>.tools,#panel3d>.tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin:12px 0;padding:12px 14px;background:#fff;border:1px solid #e5e5ea;border-radius:13px}
+main>.tools[aria-label]::before{content:attr(aria-label);flex-basis:100%;font-size:11px;line-height:1.3;font-weight:650;color:#6e6e73;letter-spacing:.025em}
+.tools label{color:#424245;gap:7px}
+.tools strong{color:#1d1d1f;font-size:13px;font-weight:600}
+select,button,input[type="number"]{background:#f5f5f7;color:#1d1d1f;border:1px solid #d2d2d7;border-radius:9px;padding:8px 11px;font:inherit;min-height:34px}
+input[type="number"]{background:#fff}
+input[type="color"]{background:#fff;border:1px solid #d2d2d7;border-radius:8px;padding:3px;width:38px;height:34px}
+button{cursor:pointer;font-weight:550;transition:background-color .15s,border-color .15s}
+button:hover:not(:disabled){background:#e8e8ed;border-color:#86868b}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+input[type="checkbox"],input[type="range"]{accent-color:#1d1d1f}
+#seek{width:100%;accent-color:#1d1d1f}
+#plot{background:#0c0b12;border:1px solid #d2d2d7;border-radius:10px}
+#readout{min-height:28px;color:#6e6e73;padding:7px 2px}
+#status{color:#424245;font-size:12px}
+.view-tabs{background:#fff;border-bottom:1px solid #e5e5ea;margin:10px 0 16px;gap:8px;padding:10px 0 14px}
+.view-tabs button{background:#f5f5f7;color:#424245;border:1px solid #e5e5ea;border-radius:999px;font-weight:600;padding:10px 18px;font-size:14px}
+.view-tabs button[aria-selected="true"]{background:#1d1d1f;color:#fff;border-color:#1d1d1f;box-shadow:none}
+.view-tabs button[aria-selected="true"]:hover{background:#424245;color:#fff}
+.view-tabs button:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+#modeHint{color:#6e6e73;font-size:12px}
+#panel3d{background:#fff}
+#panel3d .muted,#panel3d output{color:#6e6e73}
+details{max-width:none;margin:20px 0 0;padding:16px 0 0;border-top:1px solid #e5e5ea;color:#424245;line-height:1.75}
+details summary{color:#1d1d1f;font-weight:600}
+footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18px}
+@media(max-width:650px){header{padding:15px 12px;flex-direction:column;align-items:flex-start}header h1{font-size:19px}main{padding:4px 11px 24px}main>.tools,#panel3d>.tools{padding:11px;gap:8px;margin:9px 0}.view-tabs{gap:6px}.view-tabs button{padding:9px 13px;font-size:13px}#plot{height:750px}}
+@media(prefers-reduced-motion:reduce){button{transition:none}}
 </style>
-<header><div><small>MUSICAL DETAIL · OFFLINE VIEWER / WEB VIEWER 0.7</small><h1>Musical Detail — ภาพเดียว · แกนโน้ตตรงตำแหน่ง</h1></div><span id="status">กำลังอ่านข้อมูลในไฟล์…</span></header>
-<main><div class="tools"><audio id="audio" controls preload="metadata"></audio><label>แกน <select id="axis"><option value="note">ชื่อโน้ต + เปียโน</option><option value="hz">ความถี่ Hz + เปียโน</option></select></label><label>ช่วงเวลา <select id="span"><option>5</option><option selected>10</option><option>20</option><option>60</option><option value="330">ทั้งเพลง</option></select>วินาที</label><label>ย่านเสียง <select id="range"><option value="15.5,135.5">เต็มย่าน 20–20,496 Hz</option><option value="24,108">C1–C8</option><option value="24,60">C1–C4</option><option value="48,96">C3–C7</option></select></label><label><input id="follow" type="checkbox" checked>ตามเสียง</label><button id="reset">คืนภาพเต็มย่าน</button></div>
+<header><div><small>MuSpec Lab · Analysis Workspace</small><h1>Spectrogram Viewer</h1></div><span id="status">กำลังอ่านข้อมูลในไฟล์…</span></header>
+<main><div class="tools" aria-label="การเล่นเสียงและการแสดงผล"><audio id="audio" controls preload="metadata"></audio><label>แกน <select id="axis"><option value="note">ชื่อโน้ต + เปียโน</option><option value="hz">ความถี่ Hz + เปียโน</option></select></label><label>ช่วงเวลา <select id="span"><option>5</option><option selected>10</option><option>20</option><option>60</option><option value="330">ทั้งเพลง</option></select>วินาที</label><label>ย่านเสียง <select id="range"><option value="15.5,135.5">เต็มย่าน 20–20,496 Hz</option><option value="24,108">C1–C8</option><option value="24,60">C1–C4</option><option value="48,96">C3–C7</option></select></label><label><input id="follow" type="checkbox" checked>ตามเสียง</label><button id="reset">คืนภาพเต็มย่าน</button></div>
 <div class="tools" aria-label="เครื่องมือซูม"><strong>ซูมเวลา</strong><button id="timeIn" aria-label="ซูมเวลาเข้า">＋</button><button id="timeOut" aria-label="ซูมเวลาออก">−</button><strong>ซูมระดับเสียง</strong><button id="pitchIn" aria-label="ซูมระดับเสียงเข้า">＋</button><button id="pitchOut" aria-label="ซูมระดับเสียงออก">−</button><button id="boxZoom" aria-pressed="false">▧ ลากกรอบเพื่อซูม</button><button id="fit">ดูทั้งเพลง / เต็มย่าน</button><span id="zoomInfo" class="muted"></span></div>
-<div class="tools"><label>รูปแบบเวลา <select id="timeFormat"><option value="seconds">วินาที</option><option value="clock">นาที:วินาที</option></select></label><label>ชุดสี <select id="palette"><option value="reference" selected>YouTube reference · ม่วง–ชมพู</option><option value="magma">Magma · ม่วง–ส้ม</option><option value="inferno">Inferno · แดง–เหลือง</option><option value="viridis">Viridis · น้ำเงิน–เขียว</option><option value="gray">ขาวดำ</option></select></label><label><input type="checkbox" id="noteGrid">กริดโน้ตทุกเสียง</label><label><input type="checkbox" id="peakEnhance" checked>เน้นยอดเสียง (reference)</label><label><input type="checkbox" id="timeGrid">กริดเวลา</label></div>
+<div class="tools" aria-label="ตั้งค่าภาพและสี"><label>รูปแบบเวลา <select id="timeFormat"><option value="seconds">วินาที</option><option value="clock">นาที:วินาที</option></select></label><label>ชุดสี <select id="palette"><option value="reference" selected>YouTube reference · ม่วง–ชมพู</option><option value="magma">Magma · ม่วง–ส้ม</option><option value="inferno">Inferno · แดง–เหลือง</option><option value="viridis">Viridis · น้ำเงิน–เขียว</option><option value="gray">ขาวดำ</option></select></label><label><input type="checkbox" id="noteGrid">กริดโน้ตทุกเสียง</label><label><input type="checkbox" id="peakEnhance" checked>เน้นยอดเสียง (reference)</label><label><input type="checkbox" id="timeGrid">กริดเวลา</label></div>
 <div class="tools" aria-label="เขียนกำกับภาพ"><label>เครื่องมือ <select id="tool"><option value="pan">มือเลื่อนภาพ</option><option value="rect">กรอบสี่เหลี่ยม</option><option value="line">เส้นตรง</option><option value="highlight">ปากกาไฮไลต์</option></select></label><label>สี <input type="color" id="ink" value="#54f5cd" aria-label="สีเครื่องมือวาด"></label><label>ขนาด <select id="penWidth"><option value="2">บาง</option><option value="4" selected>กลาง</option><option value="7">หนา</option></select></label><button id="undo" disabled>ย้อนกลับ</button><button id="redo" disabled>ทำซ้ำ</button><button id="clearInk" disabled>ล้างที่วาด</button><span class="muted" id="annotationInfo">สิ่งที่วาดจะติดตามเวลาและโน้ต และบันทึกไว้ในเบราว์เซอร์นี้</span></div>
 <div class="tools" aria-label="คัดลอกภาพ"><button id="capture" aria-pressed="false">▣ เลือกกรอบภาพ</button><label>ความละเอียด PNG <select id="exportScale"><option value="2">2×</option><option value="3" selected>3×</option><option value="4">4×</option></select></label><button id="copyPNG" disabled>คัดลอก PNG</button><button id="downloadPNG" disabled>ดาวน์โหลด PNG</button><span id="captureInfo" role="status" aria-live="polite">เลือกกรอบบนภาพ รวมแกนได้ตามต้องการ</span></div>
 <p class="muted">Spacebar: เล่น / หยุด · ล้อเมาส์บนภาพ: ซูมเวลา · Ctrl + ล้อเมาส์บนภาพ: ซูมระดับเสียง · ลากภาพเพื่อเลื่อน</p>
