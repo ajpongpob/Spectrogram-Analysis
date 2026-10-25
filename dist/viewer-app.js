@@ -1,6 +1,6 @@
 'use strict';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs';
+import {createSurface} from './surface-3d.mjs?v=grayscale-white-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
 const LEFT=108,TOP=12,BOTTOM=30,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -15,7 +15,7 @@ const pAt=(y,v,h)=>v.hi-(y-TOP)/(h-TOP-BOTTOM)*(v.hi-v.lo);
 const xAt=(t,v,w)=>LEFT+(t-v.start)/v.span*(w-LEFT);
 const tAt=(x,v,w)=>v.start+(x-LEFT)/(w-LEFT)*v.span;
 const yForPitch=m=>yAt(m,view(),H),pitchForY=y=>pAt(y,view(),H);
-const palettes={magma:[[0,0,4],[81,18,124],[183,55,121],[252,137,97],[252,253,191]],inferno:[[0,0,4],[87,16,110],[188,55,84],[249,142,9],[252,255,164]],viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],gray:[[0,0,0],[64,64,64],[128,128,128],[192,192,192],[255,255,255]]};
+const palettes={magma:[[0,0,4],[81,18,124],[183,55,121],[252,137,97],[252,253,191]],inferno:[[0,0,4],[87,16,110],[188,55,84],[249,142,9],[252,255,164]],viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],gray:[[255,255,255],[192,192,192],[128,128,128],[64,64,64],[0,0,0]]};
 const gainLabel=document.createElement('label');gainLabel.innerHTML='ความสว่าง (linear) <input id="gain" type="range" min="0" max="3" step="0.01" value="1" aria-label="ความสว่างแบบเชิงเส้น"><output id="gainValue" for="gain">1.00×</output>';document.querySelector('.tools').append(gainLabel);
 const gainNumber=document.createElement('input');gainNumber.type='number';gainNumber.id='gainNumber';gainNumber.min='0';gainNumber.max='3';gainNumber.step='0.01';gainNumber.value='1';gainNumber.setAttribute('aria-label','ระบุความสว่าง');gainNumber.style.width='75px';gainLabel.after(gainNumber);
 function style(){return {axis:$('axis').value,clock:$('timeFormat').value==='clock',palette:$('palette').value,gain:+$('gain').value,peak:$('peakEnhance').checked,noteGrid:$('noteGrid').checked,timeGrid:$('timeGrid').checked}}
@@ -40,7 +40,7 @@ function drawInk(g,v,w,h,list){g.save();g.beginPath();g.rect(LEFT,TOP,w-LEFT,h-T
 // the same mapping as the screen and does not enlarge a screenshot bitmap.
 function drawScene(target,v,s,list,w,h,scale=1,crop=null){
  const area=crop||{x:0,y:0,w,h};target.width=Math.max(1,Math.round(area.w*scale));target.height=Math.max(1,Math.round(area.h*scale));
- const g=target.getContext('2d'),lut=colorLut(s);g.fillStyle='#0c0b12';g.fillRect(0,0,target.width,target.height);
+ const g=target.getContext('2d'),lut=colorLut(s),mono=s.palette==='gray';g.fillStyle=mono?'#ffffff':'#0c0b12';g.fillRect(0,0,target.width,target.height);
  const ax=Math.max(LEFT,area.x),ay=Math.max(TOP,area.y),bx=Math.min(w,area.x+area.w),by=Math.min(h-BOTTOM,area.y+area.h);
  const rw=Math.max(0,Math.round((bx-ax)*scale)),rh=Math.max(0,Math.round((by-ay)*scale));
  if(rw&&rh){const im=g.createImageData(rw,rh),bins=Float64Array.from({length:rh},(_,y)=>clamp(pitchBin(pAt(ay+(y+.5)/scale,v,h)),0,959));
@@ -49,22 +49,22 @@ function drawScene(target,v,s,list,w,h,scale=1,crop=null){
  }
  g.scale(scale,scale);g.translate(-area.x,-area.y);
  g.save();g.beginPath();g.rect(0,TOP,w,h-TOP-BOTTOM);g.clip();let last=-100;const px=(h-TOP-BOTTOM)/(v.hi-v.lo);g.font='11px system-ui';g.textBaseline='middle';
- for(let m=Math.floor(v.hi+.5);m>=Math.ceil(v.lo-.5);m--){const y=yAt(m,v,h),a=yAt(m+.5,v,h),b=yAt(m-.5,v,h),black=[1,3,6,8,10].includes((m%12+12)%12);g.fillStyle=black?'#24202f':'#d5d0df';g.fillRect(77,a,30,b-a);g.strokeStyle='#61566f';g.lineWidth=1;g.strokeRect(77,a,30,b-a);
-  if(s.noteGrid){g.strokeStyle=m%12===0?'#ffffff55':'#ffffff29';g.beginPath();g.moveTo(LEFT,y);g.lineTo(w,y);g.stroke()}
-  if(y>=TOP&&y<=h-BOTTOM&&y-last>=12&&(px>=12||!black)){g.fillStyle='#ddd4e9';g.textAlign='right';g.fillText(s.axis==='note'?note(m):hz(m).toFixed(hz(m)<100?1:0),70,y);last=y}
+ for(let m=Math.floor(v.hi+.5);m>=Math.ceil(v.lo-.5);m--){const y=yAt(m,v,h),a=yAt(m+.5,v,h),b=yAt(m-.5,v,h),black=[1,3,6,8,10].includes((m%12+12)%12);g.fillStyle=mono?(black?'#1d1d1f':'#ffffff'):(black?'#24202f':'#d5d0df');g.fillRect(77,a,30,b-a);g.strokeStyle=mono?'#777777':'#61566f';g.lineWidth=1;g.strokeRect(77,a,30,b-a);
+  if(s.noteGrid){g.strokeStyle=mono?(m%12===0?'#00000032':'#00000016'):(m%12===0?'#ffffff55':'#ffffff29');g.beginPath();g.moveTo(LEFT,y);g.lineTo(w,y);g.stroke()}
+  if(y>=TOP&&y<=h-BOTTOM&&y-last>=12&&(px>=12||!black)){g.fillStyle=mono?'#1d1d1f':'#ddd4e9';g.textAlign='right';g.fillText(s.axis==='note'?note(m):hz(m).toFixed(hz(m)<100?1:0),70,y);last=y}
  }
  g.restore();const tick=ticks(v,w);g.font='11px system-ui';g.textAlign='center';g.textBaseline='top';
- for(const sec of tick.values){const x=xAt(sec,v,w);if(s.timeGrid){g.strokeStyle='#ffffff35';g.beginPath();g.moveTo(x,TOP);g.lineTo(x,h-BOTTOM);g.stroke()}if(x<=w-25){g.fillStyle='#bbb0ca';g.fillText(formatTime(sec,tick.digits,s.clock),x,h-BOTTOM+8)}}
+ for(const sec of tick.values){const x=xAt(sec,v,w);if(s.timeGrid){g.strokeStyle=mono?'#00000030':'#ffffff35';g.beginPath();g.moveTo(x,TOP);g.lineTo(x,h-BOTTOM);g.stroke()}if(x<=w-25){g.fillStyle=mono?'#1d1d1f':'#bbb0ca';g.fillText(formatTime(sec,tick.digits,s.clock),x,h-BOTTOM+8)}}
  drawInk(g,v,w,h,list);g.setTransform(1,0,0,1,0,0);return target;
 }
 function render(){if(!samples)return;W=canvas.width;H=canvas.height;drawScene(cached,view(),style(),annotations,W,H);dirty=false;overlay()}
-function overlay(){if(!cached.width||!samples)return;ctx.clearRect(0,0,W,H);ctx.drawImage(cached,0,0);const x=xAt(audio.currentTime,view(),W);if(x>=LEFT&&x<=W){ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,TOP);ctx.lineTo(x,H-BOTTOM);ctx.stroke()}
+function overlay(){if(!cached.width||!samples)return;ctx.clearRect(0,0,W,H);ctx.drawImage(cached,0,0);const x=xAt(audio.currentTime,view(),W);if(x>=LEFT&&x<=W){ctx.strokeStyle=style().palette==='gray'?'#1d1d1f':'#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,TOP);ctx.lineTo(x,H-BOTTOM);ctx.stroke()}
  if(drag?.moved){if(['rect','line','highlight'].includes(drag.mode))drawInk(ctx,drag.view,W,H,[draft(drag)]);else if(['zoom','capture'].includes(drag.mode))selectionBox(drag.x,drag.y,drag.endX-drag.x,drag.endY-drag.y)}
  if(captureState)selectionBox(captureState.area.x,captureState.area.y,captureState.area.w,captureState.area.h);
 }
 function selectionBox(x,y,w,h){ctx.save();ctx.strokeStyle='#d4b8ff';ctx.lineWidth=1;ctx.setLineDash([6,4]);ctx.fillStyle='#b58cff19';ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.restore()}
 function resize(){canvas.width=Math.max(320,Math.floor(canvas.clientWidth));canvas.height=Math.max(400,Math.floor(canvas.clientHeight));W=canvas.width;H=canvas.height;changed()}new ResizeObserver(resize).observe(canvas);
-function changed(){dirty=true;invalidateCapture();surface.update()}
+function changed(){const mono=$('palette').value==='gray';gainLabel.firstChild.textContent=mono?'ความเข้มสัญญาณ (linear) ':'ความสว่าง (linear) ';$('gain').setAttribute('aria-label',mono?'ความเข้มสัญญาณแบบเชิงเส้น':'ความสว่างแบบเชิงเส้น');canvas.style.backgroundColor=mono?'#ffffff':'#0c0b12';dirty=true;invalidateCapture();surface.update()}
 function syncZoom(){for(const [id,value,text] of [['span',String(span),span.toFixed(2)],['range',`${lo},${hi}`,`${note(Math.round(lo))}–${note(Math.round(hi))} (ซูม)`]]){const select=$(id);select.querySelector('option[data-custom]')?.remove();if(![...select.options].some(o=>o.value===value)){const o=new Option(text,value);o.dataset.custom='1';select.add(o)}select.value=value}
  $('zoomInfo').textContent=`${formatTime(start)}–${formatTime(start+span)} · ${(hi-lo).toFixed(1)} ครึ่งเสียง`;changed()}
 function setTime(s,length){span=clamp(length,.25,meta.duration);start=clamp(s,0,Math.max(0,meta.duration-span))}
