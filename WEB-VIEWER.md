@@ -27,3 +27,13 @@ The right sidebar expands one category inline beneath its heading. The active ca
 - Aurora and Graphite are display names for the existing reference and grayscale palettes. Their color mappings and CQT data are unchanged.
 
 With the development server running, `pnpm test:annotations` verifies the browser interactions, persistence and exported PNG content at three desktop sizes. Set `TEST_URL` or `CHROME_PATH` to test another deployment or Chrome installation.
+
+## Object editing, language and compact workspace
+
+- Open Annotate and use Select / move. Click an object to select it, drag to move, or use Copy, Paste and Delete. New annotations become selected automatically. Text, color and stroke/text size can be edited on the selected object. Eight color presets sit beside the custom picker.
+- ⌘/Ctrl+C and V copy/paste objects within the app; Delete/Backspace removes the selected object. ⌘/Ctrl+Z, Shift+Z (or Ctrl+Y) undo and redo. Native editing shortcuts remain available in text and number fields. The object clipboard stays within the current browser tab and works across files.
+- EN/TH switches the interface live without re-analysis and remembers the choice. The landing page and viewer stay synchronized. Annotation text is preserved as written. Prepared PNG exports remain available after changing language.
+- The landing page and workbench now use compact controls, inline tool sections and collapsible guidance. Playback, seeking and zoom are shared between 2D and 3D.
+- 3D time/note grids draw through the surface as an overlay. The surface retains depth testing, and the CQT data, height and palette calculations are unchanged.
+
+`pnpm test:objects` covers geometry, validation and legacy highlights. With a server running, `pnpm test:workspace` exercises object editing, bilingual controls, four desktop widths, export and persistence, and checks actual 3D grid pixels. Both browser suites support `TEST_URL` and `CHROME_PATH`.

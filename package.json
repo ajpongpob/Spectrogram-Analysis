@@ -10,7 +10,9 @@
     "test:pitch": "node tests/pitch-calibration.mjs && node tests/axis-labels.mjs",
     "test:reference": "node tests/reference-color.mjs",
     "test:3d": "node tests/surface-3d.mjs",
-    "test:annotations": "node tests/annotations-ui.mjs"
+    "test:annotations": "node tests/annotations-ui.mjs",
+    "test:objects": "node tests/annotation-objects.mjs",
+    "test:workspace": "node tests/workspace-ui.mjs"
   },
   "dependencies": {
     "@digitaldefiance/bzip2-wasm": "^1.1.1"

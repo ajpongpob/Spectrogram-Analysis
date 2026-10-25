@@ -1,103 +1,20 @@
-<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MuSpec Lab · Spectrogram Viewer</title>
-<style>
-*{box-sizing:border-box}body{margin:0;background:#0c0b12;color:#eeeaf8;font:14px system-ui,sans-serif}header{padding:20px 26px 10px;display:flex;align-items:center;justify-content:space-between;gap:15px}h1{font-size:23px;margin:0}small,.muted{color:#aaa3bb}main{padding:0 26px 24px}.tools{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:14px 0}select,button{background:#262231;color:#fff;border:1px solid #51455f;border-radius:7px;padding:8px}audio{height:36px;width:min(460px,100%)}#plot{width:100%;height:max(650px,calc(100vh - 290px));display:block;border:1px solid #3b314b;border-radius:8px;touch-action:none}#seek{width:100%;accent-color:#bd8bff}#readout{min-height:26px;padding:5px;color:#d4c2f3}details{margin-top:14px;color:#b5acc4;max-width:1000px}summary{cursor:pointer}#status{color:#ffcc8e}label{display:flex;align-items:center;gap:6px}footer{margin-top:15px;color:#9c91ac;font-size:12px}@media(max-width:650px){main{padding:0 10px}header{padding:15px 10px}#plot{height:750px}h1{font-size:18px}}
-#plot{height:720px}h1{overflow-wrap:anywhere}
-[hidden]{display:none!important}.view-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 0;border-bottom:1px solid #51455f;margin-bottom:18px}.view-tabs button{font-size:16px;padding:12px 22px;cursor:pointer}.view-tabs button[aria-selected="true"]{background:#7044aa;border-color:#d2aaff;box-shadow:0 0 0 1px #d2aaff;font-weight:700}.view-tabs button:focus-visible{outline:3px solid #fff;outline-offset:3px}#modeHint{color:#bcb0cb;font-size:13px}
-
-/* MuSpec Lab white research UI; original ShowCQT 2D/3D image colors untouched. */
-:root{color-scheme:light}
-body{background:#fff;color:#1d1d1f;font:14px system-ui,-apple-system,'Noto Sans Thai',sans-serif}
-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:22px 26px 18px;gap:12px}
-header h1{color:#1d1d1f;font-size:23px;line-height:1.3;letter-spacing:-.025em}
-header small{display:block;color:#6e6e73;font-size:11px;font-weight:600;letter-spacing:.07em;margin-bottom:5px}
-main{background:#fff;padding:4px 26px 28px}
-.muted,small{color:#6e6e73}
-main>.tools,#panel3d>.tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin:12px 0;padding:12px 14px;background:#fff;border:1px solid #e5e5ea;border-radius:13px}
-main>.tools[aria-label]::before{content:attr(aria-label);flex-basis:100%;font-size:11px;line-height:1.3;font-weight:650;color:#6e6e73;letter-spacing:.025em}
-.tools label{color:#424245;gap:7px}
-.tools strong{color:#1d1d1f;font-size:13px;font-weight:600}
-select,button,input[type="number"]{background:#f5f5f7;color:#1d1d1f;border:1px solid #d2d2d7;border-radius:9px;padding:8px 11px;font:inherit;min-height:34px}
-input[type="number"]{background:#fff}
-input[type="color"]{background:#fff;border:1px solid #d2d2d7;border-radius:8px;padding:3px;width:38px;height:34px}
-button{cursor:pointer;font-weight:550;transition:background-color .15s,border-color .15s}
-button:hover:not(:disabled){background:#e8e8ed;border-color:#86868b}
-button:disabled{opacity:.45;cursor:not-allowed}
-button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
-input[type="checkbox"],input[type="range"]{accent-color:#1d1d1f}
-#seek{width:100%;accent-color:#1d1d1f}
-#plot{background:#0c0b12;border:1px solid #d2d2d7;border-radius:10px}
-#readout{min-height:28px;color:#6e6e73;padding:7px 2px}
-#status{color:#424245;font-size:12px}
-.view-tabs{background:#fff;border-bottom:1px solid #e5e5ea;margin:10px 0 16px;gap:8px;padding:10px 0 14px}
-.view-tabs button{background:#f5f5f7;color:#424245;border:1px solid #e5e5ea;border-radius:999px;font-weight:600;padding:10px 18px;font-size:14px}
-.view-tabs button[aria-selected="true"]{background:#1d1d1f;color:#fff;border-color:#1d1d1f;box-shadow:none}
-.view-tabs button[aria-selected="true"]:hover{background:#424245;color:#fff}
-.view-tabs button:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
-#modeHint{color:#6e6e73;font-size:12px}
-#panel3d{background:#fff}
-#panel3d .muted,#panel3d output{color:#6e6e73}
-details{max-width:none;margin:20px 0 0;padding:16px 0 0;border-top:1px solid #e5e5ea;color:#424245;line-height:1.75}
-details summary{color:#1d1d1f;font-weight:600}
-footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18px}
-@media(max-width:650px){header{padding:15px 12px;flex-direction:column;align-items:flex-start}header h1{font-size:19px}main{padding:4px 11px 24px}main>.tools,#panel3d>.tools{padding:11px;gap:8px;margin:9px 0}.view-tabs{gap:6px}.view-tabs button{padding:9px 13px;font-size:13px}#plot{height:750px}}
-@media(prefers-reduced-motion:reduce){button{transition:none}}
-
-/* MuSpec Lab Desktop: persistent, inline accordion beside the spectrogram. */
-.lab-top{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:6px 0 14px;background:#fff}
-.lab-top .view-tabs{flex:0 0 auto;margin:0;padding:0;border:0}.lab-top #modeHint{display:none}
-.lab-top>.tools{display:flex;align-items:center;flex:1 1 610px;flex-wrap:wrap;gap:8px 12px;margin:0;padding:9px 12px;background:#f5f5f7;border:1px solid #e5e5ea;border-radius:11px}
-.lab-top>.tools::before{display:none}.lab-top audio{width:clamp(180px,23vw,350px);max-width:100%;flex:0 1 350px}
-.lab-top label{display:flex;gap:6px;align-items:center;white-space:nowrap}.lab-top select{max-width:185px}
-.lab-quick-zoom{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 12px;border:1px solid #e5e5ea;border-radius:11px}
-.lab-zoom-set{display:flex;align-items:center;gap:5px}.lab-zoom-set span{font-size:12px;color:#6e6e73;margin-right:3px}.lab-zoom-set button{min-width:32px;height:32px;padding:5px 8px;font-size:16px}
-.lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;align-items:start;gap:14px;min-width:0}
-.lab-stage{min-width:0}.lab-stage #plot{width:100%;height:clamp(400px,calc(var(--lab-screen-height,900px) - 270px),740px);max-height:none;background:#0c0b12;border:1px solid #d2d2d7;border-radius:10px;touch-action:none}
-.lab-stage #readout{min-height:26px;padding:6px 0}.lab-stage #seek{display:block;margin:3px 0 7px}.lab-stage>p.muted{margin:8px 0;color:#6e6e73;font-size:12px;line-height:1.5}
- .lab-sidebar{position:sticky;top:12px;align-self:start;width:100%;min-width:0;max-height:clamp(420px,calc(var(--lab-screen-height,900px) - 260px),740px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:6px;border:1px solid #e5e5ea;border-radius:14px;background:#f5f5f7}
-.lab-tool-rail{display:flex;flex-direction:column;gap:3px}
-.lab-tool-section{min-width:0;border-radius:10px;overflow:hidden}
-.lab-tool-section:has(>.lab-rail-heading>button[aria-expanded="true"]){background:#fff;box-shadow:inset 0 0 0 1px #e5e5ea}
-.lab-rail-heading{margin:0;font:inherit}
-.lab-rail-button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 12px;background:transparent;border:1px solid transparent;border-radius:9px;color:#424245;line-height:1.3;text-align:left}
-.lab-rail-button::after{content:'›';margin-left:auto;font-size:20px;color:#86868b;transform:rotate(0deg)}
-.lab-rail-button[aria-expanded="true"]::after{transform:rotate(90deg)}
-.lab-rail-button:hover:not(:disabled){background:#e8e8ed;border-color:transparent}.lab-rail-button[aria-expanded="true"]{background:#fff;color:#1d1d1f;font-weight:650}
-.lab-rail-symbol{width:22px;text-align:center;font-size:21px;font-weight:450;line-height:1}.lab-rail-label{font-size:12px;font-weight:600;overflow-wrap:anywhere}
-.lab-panel[hidden]{display:none!important}
-.lab-panel{display:flex;flex-direction:column;gap:10px;min-width:0;padding:0 10px 12px}
-.lab-panel>.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;padding:10px 2px 0;border:0;border-top:1px solid #e5e5ea;border-radius:0;background:#fff}
-.lab-panel>.tools[aria-label]::before{display:none}
-.lab-panel>.tools label{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;width:100%;font-size:12px}
-.lab-panel>.tools label:has(input[type="checkbox"]){justify-content:flex-start}.lab-panel>.tools label select{flex:1 1 130px;max-width:100%;min-width:0}
-.lab-panel>.tools input[type="range"]{flex:1 1 100px;max-width:180px;min-width:65px}.lab-panel>.tools button{font-size:12px;padding:7px 9px}
-.lab-panel #zoomInfo,.lab-panel #annotationInfo,.lab-panel #captureInfo{font-size:11px;line-height:1.5;overflow-wrap:anywhere}
-.lab-panel #gainNumber{flex:0 0 72px}.lab-panel #gainValue{font-size:11px}
-#panel3d>div[style*="position:relative"]{height:clamp(370px,calc(var(--lab-screen-height,900px) - 305px),690px)!important;border-color:#d2d2d7!important}
-#panel3d>p.muted,#panel3d #status3d{font-size:12px;line-height:1.5}
-@media(min-width:740px){.lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px}.lab-sidebar{position:sticky;top:12px}.lab-stage,.lab-sidebar{order:0}.lab-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}.lab-top>.tools{grid-column:1/-1;grid-row:1}.lab-top .view-tabs{grid-column:1;grid-row:2}.lab-quick-zoom{grid-column:2;grid-row:2}.lab-stage #plot{height:clamp(400px,calc(var(--lab-screen-height,900px) - 270px),740px);max-height:none}}
-@media(max-width:739px){.lab-grid{display:flex;flex-direction:column}.lab-stage{width:100%}.lab-sidebar{position:relative;top:auto;width:100%;max-height:430px;order:-1}.lab-top{flex-direction:column;align-items:stretch}.lab-top>.tools{flex:0 1 auto}.lab-top audio{width:100%;flex:1 1 100%}.lab-top label{white-space:normal}.lab-stage #plot{height:520px;max-height:none}}
-.lab-panel textarea{width:100%;resize:vertical;min-height:70px;border:1px solid #d2d2d7;border-radius:8px;background:#fff;color:#1d1d1f;padding:8px;font:13px/1.6 system-ui,sans-serif}
-.lab-panel #strokeSettings,.lab-panel #textSettings{width:100%;display:flex;flex-direction:column;gap:8px}
-.lab-panel #penWidthNumber,.lab-panel #textSize{width:76px}.lab-panel #penWidth{width:100%;max-width:none;margin:0}
-.lab-panel #toolHint{font-size:11px;line-height:1.6;margin:0;color:#6e6e73}
-
-
-</style>
-<header><div><small>MuSpec Lab · Analysis Workspace</small><h1>Spectrogram Viewer</h1></div><span id="status">กำลังอ่านข้อมูลในไฟล์…</span></header>
-<main><div class="tools" aria-label="การเล่นเสียงและการแสดงผล"><audio id="audio" controls preload="metadata"></audio><label>แกน <select id="axis"><option value="note">ชื่อโน้ต + เปียโน</option><option value="hz">ความถี่ Hz + เปียโน</option></select></label><label>ช่วงเวลา <select id="span"><option>5</option><option selected>10</option><option>20</option><option>60</option><option value="330">ทั้งเพลง</option></select>วินาที</label><label>ย่านเสียง <select id="range"><option value="15.5,135.5">เต็มย่าน 20–20,496 Hz</option><option value="24,108">C1–C8</option><option value="24,60">C1–C4</option><option value="48,96">C3–C7</option></select></label><label><input id="follow" type="checkbox" checked>ตามเสียง</label><button id="reset">คืนภาพเต็มย่าน</button></div>
-<div class="tools" aria-label="เครื่องมือซูม"><strong>ซูมเวลา</strong><button id="timeIn" aria-label="ซูมเวลาเข้า">＋</button><button id="timeOut" aria-label="ซูมเวลาออก">−</button><strong>ซูมระดับเสียง</strong><button id="pitchIn" aria-label="ซูมระดับเสียงเข้า">＋</button><button id="pitchOut" aria-label="ซูมระดับเสียงออก">−</button><button id="boxZoom" aria-pressed="false">▧ ลากกรอบเพื่อซูม</button><button id="fit">ดูทั้งเพลง / เต็มย่าน</button><span id="zoomInfo" class="muted"></span></div>
-<div class="tools" aria-label="ตั้งค่าภาพและสี"><label>รูปแบบเวลา <select id="timeFormat"><option value="seconds">วินาที</option><option value="clock">นาที:วินาที</option></select></label><label>ชุดสี <select id="palette"><option value="reference" selected>Aurora · ม่วง–ชมพู</option><option value="magma">Magma · ม่วง–ส้ม</option><option value="inferno">Inferno · แดง–เหลือง</option><option value="viridis">Viridis · น้ำเงิน–เขียว</option><option value="gray">Graphite · หมึกดำบนพื้นขาว</option></select></label><label><input type="checkbox" id="noteGrid">กริดโน้ตทุกเสียง</label><label><input type="checkbox" id="peakEnhance" checked>เน้นยอดเสียง (Aurora)</label><label><input type="checkbox" id="timeGrid">กริดเวลา</label></div>
-<div class="tools" aria-label="เขียนกำกับภาพ">
-<label>เครื่องมือ <select id="tool"><option value="pan">มือเลื่อนภาพ</option><option value="rect">กรอบสี่เหลี่ยม</option><option value="line">เส้นตรง</option><option value="highlight">ปากกาไฮไลต์</option><option value="text">แทรกข้อความ</option></select></label>
-<label>สี <input type="color" id="ink" value="#54f5cd" aria-label="สีเส้นและข้อความ"></label>
-<div id="strokeSettings"><label for="penWidthNumber">ขนาดเส้น (px) <input id="penWidthNumber" type="number" min="0.25" max="48" step="0.25" value="4"></label><input id="penWidth" type="range" min="0.25" max="48" step="0.25" value="4" aria-label="ปรับขนาดเส้น"></div>
-<div id="textSettings" hidden><label for="annotationText">ข้อความ <textarea id="annotationText" rows="2" maxlength="240" placeholder="พิมพ์ข้อความ แล้วคลิกบนภาพ"></textarea></label><label>ขนาดอักษร (px) <input id="textSize" type="number" min="8" max="96" step="1" value="20"></label></div>
-<p id="toolHint">เลือกเครื่องมือ แล้วลากบนภาพเพื่อเขียนกำกับ</p>
-<button id="undo" disabled>ย้อนกลับ</button><button id="redo" disabled>ทำซ้ำ</button><button id="clearInk" disabled>ล้างที่วาด</button><span class="muted" id="annotationInfo" role="status">เส้นและข้อความยึดตามเวลาและโน้ต และบันทึกไว้ในเบราว์เซอร์นี้</span></div>
-<div class="tools" aria-label="คัดลอกภาพ"><button id="capture" aria-pressed="false">▣ เลือกกรอบภาพ</button><label>ความละเอียด PNG <select id="exportScale"><option value="2">2×</option><option value="3" selected>3×</option><option value="4">4×</option></select></label><button id="copyPNG" disabled>คัดลอก PNG</button><button id="downloadPNG" disabled>ดาวน์โหลด PNG</button><span id="captureInfo" role="status" aria-live="polite">เลือกกรอบบนภาพ รวมแกนได้ตามต้องการ</span></div>
-<p class="muted">Spacebar: เล่น / หยุด · ล้อเมาส์บนภาพ: ซูมเวลา · Ctrl + ล้อเมาส์บนภาพ: ซูมระดับเสียง · ลากภาพเพื่อเลื่อน</p>
-<canvas id="plot" aria-label="Spectrogram พร้อมแกนโน้ตและเวลา"></canvas><div id="readout">คลิกภาพเพื่อเลือกเวลา หรือใช้ปุ่มลากกรอบเพื่อซูม</div><input id="seek" type="range" min="0" max="330" step="0.01" value="15" aria-label="ตำแหน่งเวลา">
-<p class="muted">ความสว่าง linear 0.00–3.00× ขั้นละ 0.01 (ในธีม Graphite ตัวคูณนี้ควบคุมความเข้มของสัญญาณสีดำบนพื้นขาว): คูณความเข้มก่อนแปลงสี ไม่ใช่ dB หรือระดับความดังของเสียง · Aurora ใช้สูตรสี Saturation 20 / Hue −3 / HueRange 18 และ PeakRange 72 · ค่าเกินช่วงสีอาจอิ่มตัว ลดความสว่างเพื่อดูรายละเอียด · ยังไม่รับรองภาพตรง YouTube ทุกพิกเซล</p><details><summary>วิธีอ่านภาพและข้อมูลสำหรับการอ้างอิง</summary><p>ภาพสีแสดงความเข้มของข้อมูล ShowCQT เดิม ไม่ใช่ค่า dB และไม่ใช่ผลแยกเมโลดีอัตโนมัติ เส้นที่เห็นอาจเป็นเสียงหลัก ฮาร์โมนิก หรือเสียงเครื่องดนตรีอื่น ไม่มีการแก้ระดับเสียงหรือบังคับให้ตรงโน้ต</p><p>ชื่อโน้ตอยู่ที่ความถี่อ้างอิงระบบ 12 เสียงเท่า A4 = 440 Hz กึ่งกลางลิ่มเปียโนตรงกับความถี่โน้ต ขอบลิ่มอยู่ครึ่งเสียงระหว่างโน้ต เมื่อเต็มย่านจะเว้นป้ายชื่อบางตัวเพื่อไม่ให้ทับกัน ซูมเพื่อดูชื่อครบทุกเสียงได้ ข้อมูลกับแกนใช้การแปลงพิกัดเดียวกันเสมอ</p><p>ข้อมูล 960 ช่องความถี่ / 60 ภาพต่อวินาที เก็บค่าความเข้มแบบ Float32 ในหน่วยความจำ พร้อมเล่นเสียงต้นฉบับ การขยายภาพใช้การประมาณค่าเชิงเส้น ไม่เพิ่มความละเอียดของการวิเคราะห์ เสียงที่เลือกเล่นได้จากไฟล์ต้นฉบับในเบราว์เซอร์</p><p>ผู้พัฒนา: ปองภพ สุกิตติวงศ์ · หน้าดูภาพ 0.7 · ยังไม่แทนการตรวจสอบความถี่ด้วยวิธีวิเคราะห์อื่นสำหรับข้อสรุปวิทยานิพนธ์ ระบบวิเคราะห์ทำงานในเครื่อง ไม่ส่งเสียงขึ้นเซิร์ฟเวอร์ หลังจากโหลดหน้าเว็บแล้ว</p></details><footer>ผลวิเคราะห์จากไฟล์ที่เลือก · ประมวลผลในเครื่อง</footer></main>
-
-<script type="module" src="./viewer-app.js?v=lab-annotations-2"></script></html>
-
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MuSpec Lab · Workspace</title><link rel="stylesheet" href="./viewer.css?v=objects-3"></head><body>
+<header><div class="viewer-heading"><small>MuSpec Lab <span aria-hidden="true">/</span> <span data-i18n="workspace"></span></small><h1>Spectrogram</h1></div><div class="header-actions"><span id="status" role="status" data-i18n="loading"></span><div class="language-switch" role="group" data-i18n-aria="language"><button type="button" data-language="th">TH</button><button type="button" data-language="en">EN</button></div></div></header>
+<main>
+<div class="tools" data-i18n-aria="transport"><audio id="audio" controls preload="metadata"></audio><label><span data-i18n="axis"></span><select id="axis"><option value="note" data-i18n="noteAxis"></option><option value="hz" data-i18n="hzAxis"></option></select></label><label><span data-i18n="timeSpan"></span><select id="span"><option>5</option><option selected>10</option><option>20</option><option>60</option><option value="330" data-i18n="wholeSong"></option></select><span class="unit">s</span></label><label><span data-i18n="pitchRange"></span><select id="range"><option value="15.5,135.5" data-i18n="fullRange"></option><option value="24,108">C1–C8</option><option value="24,60">C1–C4</option><option value="48,96">C3–C7</option></select></label><label class="check"><input id="follow" type="checkbox" checked><span data-i18n="follow"></span></label><button id="reset" data-i18n="reset"></button></div>
+<div class="tools" data-i18n-aria="zoom"><button id="timeIn" data-i18n-aria="timeIn">+</button><button id="timeOut" data-i18n-aria="timeOut">−</button><button id="pitchIn" data-i18n-aria="pitchIn">+</button><button id="pitchOut" data-i18n-aria="pitchOut">−</button><button id="boxZoom" aria-pressed="false" data-i18n="boxZoom"></button><button id="fit" data-i18n="fit"></button><span id="zoomInfo" class="muted"></span></div>
+<div class="tools" data-i18n-aria="colors"><label><span data-i18n="timeFormat"></span><select id="timeFormat"><option value="seconds" data-i18n="seconds"></option><option value="clock" data-i18n="clock"></option></select></label><label><span data-i18n="palette"></span><select id="palette"><option value="reference" selected data-i18n="aurora"></option><option value="magma" data-i18n="magma"></option><option value="inferno" data-i18n="inferno"></option><option value="viridis" data-i18n="viridis"></option><option value="gray" data-i18n="graphite"></option></select></label><label class="check"><input type="checkbox" id="noteGrid"><span data-i18n="noteGrid"></span></label><label class="check"><input type="checkbox" id="peakEnhance" checked><span data-i18n="peak"></span></label><label class="check"><input type="checkbox" id="timeGrid"><span data-i18n="timeGrid"></span></label></div>
+<div class="tools annotation-tools" data-i18n-aria="draw">
+<label><span data-i18n="tool"></span><select id="tool"><option value="pan" data-i18n="pan"></option><option value="select" data-i18n="select"></option><option value="rect" data-i18n="rect"></option><option value="line" data-i18n="line"></option><option value="highlight" data-i18n="highlight"></option><option value="text" data-i18n="text"></option></select></label>
+<div class="object-actions"><button id="copyObject" data-i18n="copyObject" disabled></button><button id="pasteObject" data-i18n="pasteObject" disabled></button><button id="deleteObject" data-i18n="deleteObject" disabled></button></div>
+<span id="selectionInfo" class="selection-info" role="status" data-i18n="nothingSelected"></span>
+<div class="color-row"><span data-i18n="color"></span><input type="color" id="ink" value="#ef4444" data-i18n-aria="customColor"></div><div id="inkPresets" class="ink-presets" role="group" data-i18n-aria="presetColors"></div>
+<div id="strokeSettings"><label for="penWidthNumber"><span data-i18n="stroke"></span><input id="penWidthNumber" type="number" min="0.25" max="48" step="0.25" value="4"></label><input id="penWidth" type="range" min="0.25" max="48" step="0.25" value="4" data-i18n-aria="stroke"></div>
+<div id="textSettings" hidden><label for="annotationText" class="text-label"><span data-i18n="text"></span><textarea id="annotationText" rows="2" maxlength="240" data-i18n-placeholder="textPlaceholder"></textarea></label><label><span data-i18n="fontSize"></span><input id="textSize" type="number" min="8" max="96" step="1" value="20"></label></div>
+<p id="toolHint" class="muted" data-i18n="drawHint"></p>
+<div class="history-actions"><button id="undo" disabled data-i18n="undo"></button><button id="redo" disabled data-i18n="redo"></button><button id="clearInk" disabled data-i18n="clear"></button></div><span id="annotationInfo" class="muted" role="status" data-i18n="localAnnotations"></span></div>
+<div class="tools" data-i18n-aria="export"><button id="capture" aria-pressed="false" data-i18n="capture"></button><label><span data-i18n="exportScale"></span><select id="exportScale"><option value="2">2×</option><option value="3" selected>3×</option><option value="4">4×</option></select></label><div class="export-actions"><button id="copyPNG" disabled data-i18n="copyPNG"></button><button id="downloadPNG" disabled data-i18n="downloadPNG"></button></div><span id="captureInfo" role="status" aria-live="polite" data-i18n="captureHint"></span></div>
+<p id="gestureHint" class="muted" data-i18n="gestureHint"></p>
+<canvas id="plot" tabindex="0" data-i18n-aria="plotLabel"></canvas><div id="readout" data-i18n="readoutHint"></div><input id="seek" type="range" min="0" max="330" step="0.01" value="0" data-i18n-aria="seek">
+<details class="reading-notes"><summary data-i18n="readingHelp"></summary><p data-i18n="imageNote"></p><p data-i18n="axisNote"></p><p data-i18n="analysisSpec"></p></details><footer data-i18n="localFooter"></footer>
+</main><script type="module" src="./viewer-app.js?v=objects-3"></script></body></html>

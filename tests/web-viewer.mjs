@@ -14,7 +14,7 @@ try{
  let viewer=page.frames().find(f=>f.url().endsWith('/viewer.html'));
  const peaks=await viewer.evaluate(()=>[1,3,5].map(sec=>{let best=0;for(let b=1;b<960;b++)if(viewerTest.sample(sec*60,b)>viewerTest.sample(sec*60,best))best=b;return viewerTest.note(Math.round(viewerTest.binPitch(best)))}));
  assert.deepEqual(peaks,['G4','G#4','A4']);
- await viewer.locator('#timeIn').focus();await page.keyboard.press('Space');await viewer.waitForFunction(()=>!document.querySelector('audio').paused);await page.keyboard.press('Space');
+ await viewer.locator('#plot').focus();await page.keyboard.press('Space');await viewer.waitForFunction(()=>!document.querySelector('audio').paused);await page.keyboard.press('Space');
  await viewer.locator('#palette').selectOption('viridis');await viewer.locator('#timeFormat').selectOption('clock');
  await page.locator('#change-file').click();
  const started=Date.now();await page.locator('#file-input').setInputFiles(mp3);

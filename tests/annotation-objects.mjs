@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {validAnnotation,hitObject,translateObject,objectBounds,strokeWidth} from '../public/annotation-objects.mjs';
+const project=p=>({x:p.t*100,y:(100-p.m)*10}),measure=(text,size)=>text.length*size*.6;
+const line={type:'line',color:'#ef4444',width:1.25,strokePixels:true,points:[{t:1,m:60},{t:3,m:60}]};
+assert(validAnnotation(line));assert(hitObject(line,{x:200,y:402},project,measure));assert(!hitObject(line,{x:200,y:420},project,measure));
+const moved=translateObject(line,2,5,10);assert.deepEqual(moved.points,[{t:3,m:65},{t:5,m:65}]);assert.deepEqual(line.points,[{t:1,m:60},{t:3,m:60}]);
+assert.deepEqual(translateObject(line,100,-100,4).points,[{t:2,m:15.5},{t:4,m:15.5}]);
+const text={type:'text',color:'#111111',fontSize:20,text:'ท่อน A\nMelody',points:[{t:2,m:70}]};assert(validAnnotation(text));assert(hitObject(text,{x:220,y:325},project,measure));assert(!hitObject(text,{x:400,y:325},project,measure));assert.equal(objectBounds(text,project,measure).h,58);
+assert.equal(strokeWidth({...line,type:'highlight',strokePixels:undefined,width:4}),24);assert.equal(strokeWidth({...line,type:'highlight',width:4}),4);
+assert(!validAnnotation({...text,text:''}));assert(!validAnnotation({...text,points:[{t:NaN,m:60}]}));assert(!validAnnotation({...text,fontSize:999}));
+console.log('PASS: object hit testing, immutable movement, bounds, text validation and legacy highlight compatibility');
