@@ -116,6 +116,63 @@ async function init(){try{const packed=bytes(meta.data);meta.data='';const buf=a
 function tick(){let moved=false;if(!audio.paused&&Math.abs(audio.currentTime-lastPlay)>.04){if($('follow').checked&&(audio.currentTime>start+span*.85||audio.currentTime<start))position(audio.currentTime);$('seek').value=audio.currentTime;lastPlay=audio.currentTime;moved=true}if(dirty)render();else if(moved)overlay();surface.frame();requestAnimationFrame(tick)}
 window.viewerTest={binPitch,pitchBin,hz,note,yForPitch,pitchForY,formatTime,get state(){return {...view(),rows:meta.rows,ready:!!samples,annotations:annotations.length}},sample:(frame,bin)=>samples[frame*960+bin]};
 const surface=createSurface(()=>samples&&rawEncoding?{samples,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
+/* Desktop analysis workbench: controls beside, not stacked above, the spectrogram.
+   Retain all existing control IDs, DOM elements, and event listeners. */
+function mountLabWorkbench(){
+ const main=canvas.closest('main');
+ const tabs=main.querySelector('.view-tabs');
+ const groups=[...main.querySelectorAll(':scope > .tools')];
+ const panel3d=$('panel3d');
+ const hint=[...main.querySelectorAll(':scope > p')].find(p=>p.textContent.startsWith('Spacebar:'));
+ if(!tabs||groups.length!==5||!panel3d||!hint)throw Error('Viewer workbench controls are incomplete');
+ const [transport,zoom,display,annotation,capture]=groups;
+ const toolbar=document.createElement('section');
+ toolbar.className='lab-top';toolbar.setAttribute('aria-label','เครื่องมือหลักและการเล่นเสียง');
+ const grid=document.createElement('div');grid.className='lab-grid';
+ const stage=document.createElement('section');stage.className='lab-stage';stage.setAttribute('aria-label','พื้นที่ภาพ Spectrogram');
+ const sidebar=document.createElement('aside');sidebar.className='lab-sidebar';sidebar.setAttribute('aria-label','เครื่องมือปรับแต่งภาพ');
+ main.prepend(toolbar);toolbar.append(tabs,transport);
+ toolbar.after(grid);grid.append(stage,sidebar);
+ // Image-specific controls belong in the side panel; transport stays visible above.
+ display.prepend($('axis').closest('label'));
+ display.append(gainLabel,gainNumber);
+ stage.append(panel3d,canvas,$('readout'),$('seek'),hint);
+ const nav=document.createElement('div');nav.className='lab-side-tabs';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','หมวดเครื่องมือ');
+ sidebar.append(nav);
+ const specs=[['view','ภาพและซูม',[zoom,display]],['ink','เขียนกำกับ',[annotation]],['export','ส่งออกภาพ',[capture]]];
+ const panels=new Map(),buttons=new Map();
+ let current='view';
+ function select(name,focus=false){
+  current=name;
+  for(const [key,panel] of panels){const selected=key===name;panel.hidden=!selected;const button=buttons.get(key);button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1}
+  if(focus)buttons.get(name).focus();
+ }
+ for(const [id,title,items] of specs){
+  const button=document.createElement('button');button.type='button';button.id='lab-tab-'+id;button.setAttribute('role','tab');button.setAttribute('aria-controls','lab-panel-'+id);button.textContent=title;nav.append(button);buttons.set(id,button);
+  const panel=document.createElement('section');panel.id='lab-panel-'+id;panel.className='lab-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);
+  sidebar.append(panel);panels.set(id,panel);for(const el of items)panel.append(el);
+  button.addEventListener('click',()=>select(id));
+ }
+ nav.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();
+  const visible=[...buttons].filter(([,button])=>!button.hidden).map(([key])=>key);
+  const index=visible.indexOf(current);
+  const next=e.key==='Home'?0:e.key==='End'?visible.length-1:(index+(e.key==='ArrowRight'?1:-1)+visible.length)%visible.length;
+  select(visible[next],true);
+ });
+ select('view');
+ // The 3D viewer keeps its own orbit/height controls directly above its canvas.
+ // Annotation/capture are 2D-only; leave the shared appearance controls available.
+ const sync3d=()=>{
+  const is3d=!panel3d.hidden;
+  for(const id of ['ink','export'])buttons.get(id).hidden=is3d;
+  if(is3d&&current!=='view')select('view');
+ };
+ new MutationObserver(sync3d).observe(panel3d,{attributes:true,attributeFilter:['hidden']});
+ sync3d();
+}
+mountLabWorkbench();
 syncZoom();if(payload){loadInk();init()}else{
  window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error('ข้อมูลยอดเสียงไม่ครบ');if(samples.length!==meta.rows*960)throw Error('ข้อมูลวิเคราะห์ไม่ครบ');storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · Musical Detail';$('status').textContent='พร้อมใช้งาน';syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
  new ResizeObserver(()=>parent.postMessage({type:'viewer-height',height:document.body.scrollHeight},location.origin)).observe(document.body);

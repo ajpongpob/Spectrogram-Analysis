@@ -41,6 +41,68 @@ details summary{color:#1d1d1f;font-weight:600}
 footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18px}
 @media(max-width:650px){header{padding:15px 12px;flex-direction:column;align-items:flex-start}header h1{font-size:19px}main{padding:4px 11px 24px}main>.tools,#panel3d>.tools{padding:11px;gap:8px;margin:9px 0}.view-tabs{gap:6px}.view-tabs button{padding:9px 13px;font-size:13px}#plot{height:750px}}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
+
+/* MuSpec Lab desktop workbench: primary controls on top, adjustments at right. */
+.lab-top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;position:relative;background:#fff;padding:6px 0 16px}
+.lab-top .view-tabs{margin:0;padding:0;border:0;flex:0 0 auto;gap:6px}
+.lab-top #modeHint{display:none}
+.lab-top>.tools{display:flex;flex:1 1 690px;align-items:center;gap:8px 12px;margin:0;padding:8px 10px;background:#f5f5f7;border:1px solid #e5e5ea;border-radius:12px}
+.lab-top>.tools::before{display:none}
+.lab-top audio{width:clamp(190px,22vw,330px);max-width:100%;flex:0 1 330px}
+.lab-top label{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.lab-top select{max-width:240px}
+.lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;align-items:start;gap:16px}
+.lab-stage{min-width:0}
+.lab-stage #plot{width:100%;height:clamp(400px,calc(100dvh - 238px),770px);background:#0c0b12;border:1px solid #d2d2d7;border-radius:10px;touch-action:none}
+.lab-stage #readout{padding:6px 0;min-height:26px}
+.lab-stage #seek{display:block;margin:3px 0 7px}
+.lab-stage>p.muted{margin:8px 0;color:#6e6e73;font-size:12px;line-height:1.5}
+.lab-sidebar{min-width:0;align-self:start;border:1px solid #e5e5ea;border-radius:13px;padding:11px;background:#fff}
+.lab-side-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-bottom:10px;padding:3px;background:#f5f5f7;border-radius:9px}
+.lab-side-tabs button{font-size:12px;padding:9px 4px;border:0;border-radius:7px;background:transparent;color:#6e6e73;min-width:0}
+.lab-side-tabs button[aria-selected="true"]{background:#fff;color:#1d1d1f;box-shadow:0 1px 4px #00000012;font-weight:650}
+.lab-side-tabs button[aria-selected="true"]:hover{background:#fff;color:#1d1d1f}
+.lab-panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.lab-panel>.tools{margin:0;padding:12px;border:1px solid #e5e5ea;border-radius:10px;background:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.lab-panel>.tools[aria-label]::before{content:attr(aria-label);width:100%;font-size:12px;line-height:1.4;font-weight:650;color:#1d1d1f}
+.lab-panel>.tools strong{flex:1 1 auto;font-size:12px}
+.lab-panel>.tools label{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px}
+.lab-panel>.tools label select{max-width:100%;min-width:0;flex:1 1 125px}
+.lab-panel>.tools label:has(input[type="checkbox"]){justify-content:flex-start}
+.lab-panel>.tools input[type="range"]{max-width:165px;min-width:55px;flex:1 1 110px}
+.lab-panel>.tools button{font-size:12px;padding:7px 9px}
+.lab-panel #zoomInfo,.lab-panel #annotationInfo,.lab-panel #captureInfo{font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.lab-panel #gainNumber{flex:0 0 70px}
+.lab-panel #gainValue{font-size:11px}
+.lab-panel .tools[aria-label="เครื่องมือซูม"] button[id$="In"],.lab-panel .tools[aria-label="เครื่องมือซูม"] button[id$="Out"]{min-width:34px}
+#panel3d>.tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:8px 0;padding:10px 12px;border:1px solid #e5e5ea;border-radius:10px;background:#fff}
+#panel3d>.tools label{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#panel3d>.tools input[type="range"]{width:min(130px,100%)}
+#panel3d>div[style*="position:relative"]{height:clamp(360px,calc(100dvh - 325px),660px)!important;border-color:#d2d2d7!important}
+#panel3d>p.muted{font-size:12px;line-height:1.5;margin:8px 0}
+#panel3d #status3d{font-size:12px;line-height:1.5}
+@media(min-width:1080px){
+ .lab-sidebar{position:sticky;top:12px}
+ .lab-stage #plot{max-height:calc(100dvh - 160px)}
+}
+@media(max-width:1079px){
+ .lab-grid{display:flex;flex-direction:column}
+ .lab-stage,.lab-sidebar{width:100%}
+ .lab-sidebar{position:static}
+ .lab-top{flex-direction:column;align-items:stretch}
+ .lab-top>.tools{flex:1 1 auto}
+ .lab-top .view-tabs{justify-content:flex-start}
+ .lab-top #modeHint{display:inline}
+ .lab-stage #plot{height:620px;max-height:none}
+}
+@media(max-width:650px){
+ .lab-top{gap:9px}
+ .lab-top>.tools{padding:10px}
+ .lab-top audio{flex:1 1 100%;width:100%}
+ .lab-top label{white-space:normal}
+ .lab-stage #plot{height:520px}
+ .lab-sidebar{padding:9px}
+}
 </style>
 <header><div><small>MuSpec Lab · Analysis Workspace</small><h1>Spectrogram Viewer</h1></div><span id="status">กำลังอ่านข้อมูลในไฟล์…</span></header>
 <main><div class="tools" aria-label="การเล่นเสียงและการแสดงผล"><audio id="audio" controls preload="metadata"></audio><label>แกน <select id="axis"><option value="note">ชื่อโน้ต + เปียโน</option><option value="hz">ความถี่ Hz + เปียโน</option></select></label><label>ช่วงเวลา <select id="span"><option>5</option><option selected>10</option><option>20</option><option>60</option><option value="330">ทั้งเพลง</option></select>วินาที</label><label>ย่านเสียง <select id="range"><option value="15.5,135.5">เต็มย่าน 20–20,496 Hz</option><option value="24,108">C1–C8</option><option value="24,60">C1–C4</option><option value="48,96">C3–C7</option></select></label><label><input id="follow" type="checkbox" checked>ตามเสียง</label><button id="reset">คืนภาพเต็มย่าน</button></div>
@@ -52,5 +114,5 @@ footer{color:#6e6e73;border-top:1px solid #e5e5ea;padding-top:12px;margin-top:18
 <canvas id="plot" aria-label="Spectrogram พร้อมแกนโน้ตและเวลา"></canvas><div id="readout">คลิกภาพเพื่อเลือกเวลา หรือใช้ปุ่มลากกรอบเพื่อซูม</div><input id="seek" type="range" min="0" max="330" step="0.01" value="15" aria-label="ตำแหน่งเวลา">
 <p class="muted">ความสว่าง linear 0.00–3.00× ขั้นละ 0.01 (ในโหมดขาวดำ ตัวคูณนี้ควบคุมความเข้มของสัญญาณสีดำบนพื้นขาว): คูณความเข้มก่อนแปลงสี ไม่ใช่ dB หรือระดับความดังของเสียง · reference ใช้สูตรสี Saturation 20 / Hue −3 / HueRange 18 และ PeakRange 72 · ค่าเกินช่วงสีอาจอิ่มตัว ลดความสว่างเพื่อดูรายละเอียด · ยังไม่รับรองภาพตรง YouTube ทุกพิกเซล</p><details><summary>วิธีอ่านภาพและข้อมูลสำหรับการอ้างอิง</summary><p>ภาพสีแสดงความเข้มของข้อมูล ShowCQT เดิม ไม่ใช่ค่า dB และไม่ใช่ผลแยกเมโลดีอัตโนมัติ เส้นที่เห็นอาจเป็นเสียงหลัก ฮาร์โมนิก หรือเสียงเครื่องดนตรีอื่น ไม่มีการแก้ระดับเสียงหรือบังคับให้ตรงโน้ต</p><p>ชื่อโน้ตอยู่ที่ความถี่อ้างอิงระบบ 12 เสียงเท่า A4 = 440 Hz กึ่งกลางลิ่มเปียโนตรงกับความถี่โน้ต ขอบลิ่มอยู่ครึ่งเสียงระหว่างโน้ต เมื่อเต็มย่านจะเว้นป้ายชื่อบางตัวเพื่อไม่ให้ทับกัน ซูมเพื่อดูชื่อครบทุกเสียงได้ ข้อมูลกับแกนใช้การแปลงพิกัดเดียวกันเสมอ</p><p>ข้อมูล 960 ช่องความถี่ / 60 ภาพต่อวินาที เก็บค่าความเข้มแบบ Float32 ในหน่วยความจำ พร้อมเล่นเสียงต้นฉบับ การขยายภาพใช้การประมาณค่าเชิงเส้น ไม่เพิ่มความละเอียดของการวิเคราะห์ เสียงที่เลือกเล่นได้จากไฟล์ต้นฉบับในเบราว์เซอร์</p><p>ผู้พัฒนา: ปองภพ สุกิตติวงศ์ · หน้าดูภาพ 0.7 · ยังไม่แทนการตรวจสอบความถี่ด้วยวิธีวิเคราะห์อื่นสำหรับข้อสรุปวิทยานิพนธ์ ระบบวิเคราะห์ทำงานในเครื่อง ไม่ส่งเสียงขึ้นเซิร์ฟเวอร์ หลังจากโหลดหน้าเว็บแล้ว</p></details><footer>ผลวิเคราะห์จากไฟล์ที่เลือก · ประมวลผลในเครื่อง</footer></main>
 
-<script type="module" src="./viewer-app.js?v=grayscale-white-1"></script></html>
+<script type="module" src="./viewer-app.js?v=desktop-dock-1"></script></html>
 
