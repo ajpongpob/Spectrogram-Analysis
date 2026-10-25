@@ -9,3 +9,11 @@ const text={type:'text',color:'#111111',fontSize:20,text:'ท่อน A\nMelody
 assert.equal(strokeWidth({...line,type:'highlight',strokePixels:undefined,width:4}),24);assert.equal(strokeWidth({...line,type:'highlight',width:4}),4);
 assert(!validAnnotation({...text,text:''}));assert(!validAnnotation({...text,points:[{t:NaN,m:60}]}));assert(!validAnnotation({...text,fontSize:999}));
 console.log('PASS: object hit testing, immutable movement, bounds, text validation and legacy highlight compatibility');
+const {arrowGeometry}=await import('../public/annotation-objects.mjs');
+for(const type of ['arrow','doubleArrow','ellipse','triangle'])assert(validAnnotation({...line,type}));
+const arrow={...line,type:'arrow',width:8},geo=arrowGeometry(arrow,project);assert.equal(geo.heads.length,1);assert(hitObject(arrow,geo.heads[0][1],project,measure),'Arrowhead wings must be selectable');const bounds=objectBounds(arrow,project,measure);assert(bounds.h>8,'Selection bounds include the arrowhead');
+assert.equal(arrowGeometry({...arrow,type:'doubleArrow'},project).heads.length,2);
+const oval={...line,type:'ellipse',points:[{t:1,m:60},{t:3,m:40}]};assert(hitObject(oval,{x:200,y:500},project,measure));assert(!hitObject(oval,{x:105,y:405},project,measure));
+assert(hitObject({...oval,type:'triangle'},{x:200,y:520},project,measure));assert(!hitObject({...oval,type:'triangle'},{x:105,y:405},project,measure));
+assert(arrowGeometry({...arrow,points:[{t:1,m:60},{t:1.01,m:60}]},project).heads.flat().every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));
+console.log('PASS: arrowheads, double arrows, ellipse/triangle hit areas and short-arrow geometry');

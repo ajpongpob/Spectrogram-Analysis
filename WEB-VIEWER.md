@@ -37,3 +37,11 @@ With the development server running, `pnpm test:annotations` verifies the browse
 - 3D time/note grids draw through the surface as an overlay. The surface retains depth testing, and the CQT data, height and palette calculations are unchanged.
 
 `pnpm test:objects` covers geometry, validation and legacy highlights. With a server running, `pnpm test:workspace` exercises object editing, bilingual controls, four desktop widths, export and persistence, and checks actual 3D grid pixels. Both browser suites support `TEST_URL` and `CHROME_PATH`.
+
+## Shapes and full screen
+
+- Annotation shapes include a single arrow, double arrow, circle/ellipse, triangle, rectangle and line. Hold Shift while drawing an ellipse or rectangle for a circle or square. Shapes use the existing object selection, movement, copy/paste, delete, undo/redo, local persistence and PNG export.
+- Full screen is available beside the quick zoom buttons for both 2D and 3D. Exit with the visible button or Escape; unsupported browsers use an expanded browser view.
+- 3D automatically fits the scene to its frame and supports a left/right piano axis, with note/Hz labels spaced to avoid collisions. Alt+wheel adjusts the display zoom.
+
+With the built site served locally, `pnpm test:shapes` checks new shape creation and editing, Shift-constrained circles, export, persistence, native/fallback fullscreen, pitch-axis placement and accurate picking on the fitted 3D scene.

@@ -19,3 +19,9 @@ const mesh=meshSamples(samples,600,{start:0,span:10,lo:15.5,hi:135.5});assert.eq
 assert.equal(Math.max(...meshSamples(samples,600,{start:0,span:2,lo:15.5,hi:135.5}).values),0);
 assert.equal(Math.max(...meshSamples(samples,600,{start:4,span:2,lo:60,hi:100}).values),0);
 console.log('PASS: 360° projection, fixed linear heights, Uint16 mesh limits, transient preservation and time/pitch cropping');
+const {fitFrame}=await import('../public/surface-math.mjs');
+for(const aspect of [.8,1.6,2.4])for(const yaw of [0,45,120,270,325]){
+ const points=[[-2,-1.5,-.6],[2,1.5,-.6],[0,0,1.4]],fit=fitFrame(points,yaw,55,7,aspect);
+ for(const point of points){const p=project(point,yaw,55,7,aspect),screen=[(p[0]-fit.x)*fit.scale,(p[1]-fit.y)*fit.scale];assert(Math.abs(screen[0])<=.900001);assert(Math.abs(screen[1])<=.880001);assert(Math.abs(screen[0]/fit.scale+fit.x-p[0])<1e-10)}
+}
+console.log('PASS: scene fit across viewport ratios and rotations with reversible screen coordinates');

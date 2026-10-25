@@ -1,8 +1,8 @@
 'use strict';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=objects-4';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=objects-4';
-import {validAnnotation,strokeWidth,objectBounds,hitObject,translateObject} from './annotation-objects.mjs';
+import {createSurface} from './surface-3d.mjs?v=shapes-1';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=shapes-1';
+import {validAnnotation,strokeWidth,strokeTypes,arrowGeometry,trianglePoints,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=shapes-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
 const LEFT=108,TOP=12,BOTTOM=30,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -30,7 +30,7 @@ function intensity(t,b,data=samples){const t0=Math.floor(t),t1=Math.min(meta.row
 let annotations=[],undoStack=[],redoStack=[],selectedIndex=-1,objectClipboard=null;
 let storageKey='musical-detail:rosanna:960:19790:annotations:v1';
 try{const value=JSON.parse(sessionStorage.getItem('muspec-object-clipboard'));if(validAnnotation(value))objectClipboard=value}catch{}
-const annotationModes=['select','rect','line','highlight','text'];
+const annotationModes=['select',...strokeTypes,'text'];
 const projectPoint=p=>({x:xAt(p.t,view(),W),y:yAt(p.m,view(),H)});
 function measureText(text,size){ctx.save();ctx.font=`${size}px system-ui, sans-serif`;const width=ctx.measureText(text).width;ctx.restore();return width}
 function loadInk(){try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(saved))annotations=saved.filter(validAnnotation)}catch{}annotationControls()}
@@ -48,7 +48,7 @@ function syncSelection(populate=true){
  }
  setText($('selectionInfo'),selected?'selectedObject':'nothingSelected',{type:selected?t(selected.type):''});
  for(const button of $('inkPresets').querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.color===$('ink').value));
- setText($('toolHint'),modeName==='select'?(selected?.type==='text'?'editTextHint':'selectHint'):modeName==='text'?'textHint':modeName==='pan'?'panHint':'drawHint');
+ setText($('toolHint'),modeName==='select'?(selected?.type==='text'?'editTextHint':'selectHint'):modeName==='text'?'textHint':modeName==='pan'?'panHint':['ellipse','rect'].includes(modeName)?'shapeHint':'drawHint');
  annotationControls();
 }
 function saveInk(){try{localStorage.setItem(storageKey,JSON.stringify(annotations));setText($('annotationInfo'),'annotationSaved',{count:annotations.length})}catch{setText($('annotationInfo'),'annotationStorageError')}annotationControls()}
@@ -89,8 +89,16 @@ function drawInk(g,v,w,h,list){
    // Older saved highlights used a sixfold width multiplier.
    g.strokeStyle=a.color;g.lineWidth=strokeWidth(a);
    g.lineCap='round';g.lineJoin='round';g.globalAlpha=a.type==='highlight'?.3:1;g.beginPath();
-   if(a.type==='rect')g.rect(p[0].x,p[0].y,p[1].x-p[0].x,p[1].y-p[0].y);
-   else{g.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)g.lineTo(p[i].x,p[i].y)}g.stroke();
+   if(['arrow','doubleArrow'].includes(a.type)){
+    const {shaft,heads}=arrowGeometry(a,point=>({x:xAt(point.t,v,w),y:yAt(point.m,v,h)}));
+    g.moveTo(shaft[0].x,shaft[0].y);g.lineTo(shaft[1].x,shaft[1].y);g.stroke();g.fillStyle=a.color;
+    for(const head of heads){g.beginPath();g.moveTo(head[0].x,head[0].y);for(const point of head.slice(1))g.lineTo(point.x,point.y);g.closePath();g.fill()}
+   }else{
+    if(a.type==='rect')g.rect(p[0].x,p[0].y,p[1].x-p[0].x,p[1].y-p[0].y);
+    else if(a.type==='ellipse')g.ellipse((p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2,Math.abs(p[1].x-p[0].x)/2,Math.abs(p[1].y-p[0].y)/2,0,0,Math.PI*2);
+    else if(a.type==='triangle'){const vertices=trianglePoints(a,point=>({x:xAt(point.t,v,w),y:yAt(point.m,v,h)}));g.moveTo(vertices[0].x,vertices[0].y);for(const point of vertices.slice(1))g.lineTo(point.x,point.y);g.closePath()}
+    else{g.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)g.lineTo(p[i].x,p[i].y)}g.stroke();
+   }
   }
   g.restore();
  }
@@ -129,7 +137,7 @@ function drawScene(target,v,s,list,w,h,scale=1,crop=null){
 }
 function render(){if(!samples)return;W=canvas.width;H=canvas.height;drawScene(cached,view(),style(),annotations,W,H);dirty=false;overlay()}
 function overlay(){if(!cached.width||!samples)return;ctx.clearRect(0,0,W,H);ctx.drawImage(cached,0,0);const x=xAt(audio.currentTime,view(),W);if(x>=LEFT&&x<=W){ctx.strokeStyle=style().palette==='gray'?'#1d1d1f':'#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,TOP);ctx.lineTo(x,H-BOTTOM);ctx.stroke()}
- if(drag?.moved){if(['rect','line','highlight'].includes(drag.mode))drawInk(ctx,drag.view,W,H,[draft(drag)]);else if(['zoom','capture'].includes(drag.mode))selectionBox(drag.x,drag.y,drag.endX-drag.x,drag.endY-drag.y)}
+ if(drag?.moved){if(strokeTypes.includes(drag.mode))drawInk(ctx,drag.view,W,H,[draft(drag)]);else if(['zoom','capture'].includes(drag.mode))selectionBox(drag.x,drag.y,drag.endX-drag.x,drag.endY-drag.y)}
  if(modeName==='select'&&selectedIndex>=0){const b=objectBounds(annotations[selectedIndex],projectPoint,measureText);ctx.save();ctx.beginPath();ctx.rect(LEFT,TOP,W-LEFT,H-TOP-BOTTOM);ctx.clip();ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);ctx.strokeStyle='#0071e3';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);ctx.restore()}
  if(captureState)selectionBox(captureState.area.x,captureState.area.y,captureState.area.w,captureState.area.h);
 }
@@ -181,7 +189,9 @@ canvas.onpointerdown=e=>{
 canvas.onpointermove=e=>{
  const p=point(e,drag?.mode==='capture');
  if(!drag){if(p.x>LEFT)setText($('readout'),'readout',{time:formatTime(tAt(p.x,view(),W)),hz:hz(pAt(p.y,view(),H)).toFixed(2),note:note(Math.round(pAt(p.y,view(),H)))});if(modeName==='select')canvas.style.cursor=hitIndex(p)>=0?'move':'default';return}
- const d=drag,dx=p.x-d.x,dy=p.y-d.y;d.endX=p.x;d.endY=p.y;if(Math.hypot(dx,dy)>3)d.moved=true;if(!d.moved)return;manual();
+ const d=drag;
+ if(e.shiftKey&&['rect','ellipse'].includes(d.mode)){const sx=p.x<d.x?-1:1,sy=p.y<d.y?-1:1,side=Math.min(Math.max(Math.abs(p.x-d.x),Math.abs(p.y-d.y)),sx>0?W-d.x:d.x-LEFT,sy>0?H-BOTTOM-d.y:d.y-TOP);p.x=d.x+sx*side;p.y=d.y+sy*side}
+ const dx=p.x-d.x,dy=p.y-d.y;d.endX=p.x;d.endY=p.y;if(Math.hypot(dx,dy)>3)d.moved=true;if(!d.moved)return;manual();
  if(d.mode==='move'){
   const item=translateObject(d.item,dx/(W-LEFT)*d.view.span,-dy/(H-TOP-BOTTOM)*(d.view.hi-d.view.lo),meta.duration);
   annotations=d.before.map((a,i)=>i===d.index?item:a);dirty=true;
@@ -194,14 +204,16 @@ canvas.onpointerup=e=>{
  if(d.mode==='move'){if(d.moved)editInk(annotations,{before:d.before});return}
  if(d.moved&&d.mode==='capture'&&area.w>=8&&area.h>=8){setMode('pan');prepareCapture(area);return}
  if(d.moved&&d.mode==='zoom'&&area.w>8&&area.h>8){const lower=pAt(area.y+area.h,d.view,H),upper=pAt(area.y,d.view,H);setTime(tAt(area.x,d.view,W),area.w/(W-LEFT)*d.view.span);setPitch(lower,upper-lower);setMode('pan');syncZoom()}
- else if(d.moved&&['rect','line','highlight'].includes(d.mode)){setMode('select');editInk([...annotations,draft(d)],{selection:annotations.length})}
+ else if(d.moved&&strokeTypes.includes(d.mode)){setMode('select');editInk([...annotations,draft(d)],{selection:annotations.length})}
  else if(!d.moved&&d.mode==='text'){setMode('select');editInk([...annotations,{type:'text',color:d.color,text:d.text,fontSize:d.fontSize,points:[dataPoint({x:d.x,y:d.y},d.view)]}],{selection:annotations.length})}
  else if(!d.moved&&d.mode==='pan'){audio.currentTime=clamp(tAt(d.x,view(),W),0,meta.duration)}dirty=true;
 };
 canvas.onpointercancel=cancelDrag;
 function editingField(e){return e.composedPath().some(el=>el instanceof HTMLElement&&(el.isContentEditable||el.matches('input,textarea,select')))}
 document.addEventListener('keydown',e=>{
- if(e.isComposing||editingField(e))return;
+ if(e.isComposing)return;
+ if(e.key==='Escape'&&isExpanded()){if(!document.fullscreenElement)leaveFullscreen();return}
+ if(editingField(e))return;
  if(e.key==='Escape'){cancelDrag();selectedIndex=-1;setMode(annotationModes.includes(modeName)?'select':'pan');invalidateCapture();return}
  if(!annotationModes.includes(modeName)||!$('panel3d').hidden||drag)return;
  const command=e.metaKey||e.ctrlKey,key=e.key.toLowerCase();
@@ -230,6 +242,18 @@ async function init(){try{sourceName=document.querySelector('h1')?.textContent||
 function tick(){let moved=false;if(!audio.paused&&Math.abs(audio.currentTime-lastPlay)>.04){if($('follow').checked&&(audio.currentTime>start+span*.85||audio.currentTime<start))position(audio.currentTime);$('seek').value=audio.currentTime;lastPlay=audio.currentTime;moved=true}if(dirty)render();else if(moved)overlay();surface.frame();requestAnimationFrame(tick)}
 window.viewerTest={binPitch,pitchBin,hz,note,yForPitch,pitchForY,formatTime,get state(){return {...view(),rows:meta.rows,ready:!!samples,annotations:annotations.length}},sample:(frame,bin)=>samples[frame*960+bin]};
 const surface=createSurface(()=>samples&&rawEncoding?{samples,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
+function isExpanded(){return !!document.fullscreenElement||$('lab-stage')?.classList.contains('expanded')}
+async function leaveFullscreen(){
+ if(document.fullscreenElement)await document.exitFullscreen();
+ $('lab-stage').classList.remove('expanded');parent.postMessage({type:'viewer-expanded',expanded:false},location.origin);
+ $('fullscreen').focus({preventScroll:true});
+}
+async function enterFullscreen(){
+ if(isExpanded())return leaveFullscreen();
+ setText($('fullscreenTitle'),'workspace');
+ try{if(!document.fullscreenEnabled||!$('lab-stage').requestFullscreen)throw Error('unavailable');await $('lab-stage').requestFullscreen()}
+ catch{$('lab-stage').classList.add('expanded');setText($('fullscreenTitle'),'webExpanded');parent.postMessage({type:'viewer-expanded',expanded:true},location.origin)}
+}
 /* Desktop: common controls above; one persistent accordion section beside the plot. */
 function mountLabWorkbench(){
  const main=canvas.closest('main');
@@ -241,7 +265,8 @@ function mountLabWorkbench(){
  const [transport,zoom,appearance,annotation,capture]=groups;
  const top=document.createElement('section');top.className='lab-top';
  const grid=document.createElement('div');grid.className='lab-grid';
- const stage=document.createElement('section');stage.className='lab-stage';
+ const stage=document.createElement('section');stage.className='lab-stage';stage.id='lab-stage';
+ const fullscreenBar=document.createElement('div');fullscreenBar.className='fullscreen-bar';fullscreenBar.innerHTML='<span id="fullscreenTitle" data-i18n="workspace"></span><button id="exitFullscreen" data-i18n="exitFullscreen"></button>';stage.append(fullscreenBar);
  const aside=document.createElement('aside');aside.className='lab-sidebar';aside.dataset.i18nAria='workspace';
  const rail=document.createElement('nav');rail.className='lab-tool-rail';rail.dataset.i18nAria='workspace';
  main.prepend(top);top.append(tabs,transport);top.after(grid);grid.append(stage,aside);aside.append(rail);
@@ -252,6 +277,8 @@ function mountLabWorkbench(){
   const text=document.createElement('span');setText(text,label);group.append(text);
   for(const id of ids)group.append($(id));quick.append(group);
  }
+ const fullscreenButton=document.createElement('button');fullscreenButton.id='fullscreen';fullscreenButton.dataset.i18n='fullscreen';quick.append(fullscreenButton);fullscreenButton.onclick=enterFullscreen;$('exitFullscreen').onclick=leaveFullscreen;
+ document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)fullscreenButton.focus({preventScroll:true})});
  top.append(quick);zoom.querySelectorAll('strong').forEach(el=>el.remove());
  const axes=document.createElement('div');axes.className='tools';axes.dataset.i18nAria='axes';
  for(const id of ['axis','timeFormat','noteGrid','timeGrid'])axes.append($(id).closest('label'));

@@ -44,3 +44,10 @@ export function meshSamples(samples,rows,v,nx=160,ny=320){
  }
  return {values,bins,nx,ny};
 }
+// Fit a projected scene while retaining its perspective and data coordinates.
+export function fitFrame(points,yaw,pitch,distance,aspect){
+ let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+ for(const point of points){const [x,y,depth]=project(point,yaw,pitch,distance,aspect);if(depth<=0)continue;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+ if(!Number.isFinite(minX))return {scale:1,x:0,y:0};
+ return {scale:Math.min(1.8/Math.max(.01,maxX-minX),1.76/Math.max(.01,maxY-minY)),x:(minX+maxX)/2,y:(minY+maxY)/2};
+}
