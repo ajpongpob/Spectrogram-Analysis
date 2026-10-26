@@ -5,3 +5,5 @@
 body.viewer-expanded{overflow:hidden}.viewer-expanded #viewer-host iframe{position:fixed;inset:0;z-index:10000;width:100vw;height:100dvh!important;border:0;border-radius:0}
 
 .version-badge{font-size:10px;font-weight:500;letter-spacing:0;color:#6e737d;vertical-align:middle;padding:2px 5px;border:1px solid #e5e5e9;border-radius:5px;white-space:nowrap}
+
+.license-strip{display:flex;align-items:center;justify-content:space-between;gap:18px;border:1px solid #e5e5e9;background:#f7f8fa;border-radius:10px;padding:12px 16px;margin-top:20px;font-size:11px;line-height:1.7;color:#5c606a}.license-strip a{flex:none;white-space:nowrap;font-weight:600}@media(max-width:700px){.license-strip{flex-direction:column;align-items:flex-start;gap:8px}}

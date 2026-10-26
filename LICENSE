@@ -1,0 +1,74 @@
+MuSpec Lab — Educational and Non-Commercial Research Use License
+Version 1.0 — 26 October 2026
+Copyright (c) 2026 Pongpob Sukittiwong. All rights reserved.
+
+IMPORTANT: This custom license applies ONLY to original MuSpec Lab materials
+owned by the author. It is not an open-source license. It does not replace
+or limit the LGPL-3.0-or-later license of ShowCQT or other third-party rights.
+See THIRD_PARTY_NOTICES.md.
+
+1. COVERED MATERIALS
+"Covered Materials" are original MuSpec Lab source/compiled application code,
+interface, documentation, graphics and other protected contributions, solely
+to the extent owned by Pongpob Sukittiwong. No third-party work is covered.
+
+2. PERMITTED EDUCATIONAL AND RESEARCH USE
+Users may access and run the official, unmodified MuSpec Lab application
+without charge for non-commercial education, teaching, scholarly research,
+and music/audio analysis. Users may retain their analysis results and
+reproduce resulting spectrograms, charts and screenshots in non-commercial
+course materials, theses, research reports, conference presentations and
+academic journal articles, including those issued by commercial academic
+publishers, with attribution under section 3. No right to third-party audio,
+recordings or compositions is granted by this software license.
+
+3. ATTRIBUTION REQUIREMENT
+When distributing or publishing analyses or results made using MuSpec Lab,
+acknowledge the tool, developer and URL clearly. Suggested reference:
+Sukittiwong, P. (2026). MuSpec Lab (version 1.0.0) [Web application].
+https://ajpongpob.github.io/Spectrogram-Analysis/
+Where important for reproducibility, state software version, date accessed,
+input recording, analyzed segment and key settings. Do not imply endorsement.
+
+4. RESERVED RIGHTS
+Except where section 2 permits, applicable law allows, or the copyright
+owner has granted advance written permission, you may not copy, reproduce,
+mirror, redistribute, publish, host, sell, sublicense or otherwise exploit
+the Covered Materials; modify, translate, adapt or prepare derivative works
+from those materials; rebrand, embed or incorporate them in other products;
+or remove or misstate notices of origin or ownership. Routine temporary
+browser copies/cache necessary to access the official app, authorized
+research output images, and ordinary links to the official site are allowed.
+
+5. COMMERCIAL USE
+Commercial use of Covered Materials, including paid analytical services,
+resale, monetized copies, commercial software products, paid access and
+business training products, requires prior written permission. Publication
+of permitted academic findings through a scholarly publisher does not
+alone constitute prohibited commercial exploitation.
+
+6. THIRD-PARTY COMPONENTS ARE EXPRESSLY EXCLUDED
+The ShowCQT/showcqt-js JavaScript and WebAssembly modules are licensed
+under LGPL-3.0-or-later. They remain free to copy, modify, redistribute,
+reverse engineer for debugging modifications and otherwise use under the
+conditions of LGPL. Sections 2–5 place NO additional restriction on them.
+GPL/LGPL license texts are supplied in public/COPYING and
+public/COPYING.LESSER, with deployed copies in dist/. bzip2 components
+retain their separate terms. See THIRD_PARTY_NOTICES.md. Recipients
+distributing any combined work must independently honor LGPL requirements,
+including applicable source and relinking provisions.
+
+7. DISCLAIMER
+To the maximum extent permitted by law, the Covered Materials are
+provided "AS IS", without warranties. Users remain responsible for their
+music copyright clearances and research interpretations.
+
+8. WRITTEN PERMISSION AND OTHER RIGHTS
+For commercial licenses or permission to reproduce/modify the original
+MuSpec Lab materials, contact the author through:
+https://github.com/ajpongpob/Spectrogram-Analysis
+Nothing herein limits statutory exceptions, third-party software licenses,
+or permissions separately granted to recipients. Updates to these terms
+for future versions do not retroactively revoke existing valid grants.
+
+Official site: https://ajpongpob.github.io/Spectrogram-Analysis/
