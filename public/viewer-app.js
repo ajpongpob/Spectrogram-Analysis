@@ -3,8 +3,8 @@ import {amplitudeDB,dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
 import {drawAnnotations} from './annotation-render.mjs?v=db-1';
 import {playReferenceNote} from './piano-reference.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=memory-1';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=memory-1';
+import {createSurface} from './surface-3d.mjs?v=axes-2';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=axes-2';
 import {validAnnotation,strokeWidth,strokeTypes,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=db-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
@@ -23,7 +23,7 @@ const yForPitch=m=>yAt(m,view(),H),pitchForY=y=>pAt(y,view(),H);
 const palettes={magma:[[0,0,4],[81,18,124],[183,55,121],[252,137,97],[252,253,191]],inferno:[[0,0,4],[87,16,110],[188,55,84],[249,142,9],[252,255,164]],viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],gray:[[255,255,255],[192,192,192],[128,128,128],[64,64,64],[0,0,0]]};
 const gainLabel=document.createElement('label');gainLabel.innerHTML='<span id="gainLabelText" data-i18n="gain"></span> <input id="gain" type="range" min="0" max="3" step="0.01" value="1" data-i18n-aria="gain"><output id="gainValue" for="gain">1.00×</output>';document.querySelector('.tools').append(gainLabel);
 const gainNumber=document.createElement('input');gainNumber.type='number';gainNumber.id='gainNumber';gainNumber.min='0';gainNumber.max='3';gainNumber.step='0.01';gainNumber.value='1';gainNumber.dataset.i18nAria='gainNumber';gainNumber.style.width='75px';gainLabel.after(gainNumber);
-function style(){return {levelMode:$('levelMode').value,dbFloor:+$('dbFloor').value,axis:$('axis').value,clock:$('timeFormat').value==='clock',palette:$('palette').value,gain:+$('gain').value,peak:$('peakEnhance').checked,noteGrid:$('noteGrid').checked,timeGrid:$('timeGrid').checked}}
+function style(){return {levelMode:$('levelMode').value,dbFloor:+$('dbFloor').value,axis:$('axis').value,piano:!$('axis').value.endsWith('-only'),clock:$('timeFormat').value==='clock',palette:$('palette').value,gain:+$('gain').value,peak:$('peakEnhance').checked,noteGrid:$('noteGrid').checked,timeGrid:$('timeGrid').checked}}
 function colorLut(s){if(s.levelMode==='db')return Array.from({length:4096},(_,i)=>dbRGB(10**((s.dbFloor+i/4095*-s.dbFloor)/20),s.palette==='reference'?null:palettes[s.palette],referenceRGB,s.dbFloor));if(s.palette==='reference')return Array.from({length:4096},(_,i)=>referenceRGB(i/4095));const stops=palettes[s.palette];return Array.from({length:4096},(_,i)=>{const v=Math.min(1,i/4095*s.gain)*4,j=Math.min(3,Math.floor(v)),f=v-j;return stops[j].map((a,c)=>Math.round(a*(1-f)+stops[j+1][c]*f))})}
 function formatTime(sec,digits=2,clock=style().clock){const factor=10**digits,total=Math.round(Math.max(0,sec)*factor);if(!clock)return (total/factor).toFixed(digits)+'s';const mins=Math.floor(total/(60*factor)),rest=(total-mins*60*factor)/factor;return mins+':'+rest.toFixed(digits).padStart(digits?digits+3:2,'0')}
 function ticks(v,w){const target=v.span/Math.max(2,Math.floor((w-LEFT)/100)),p=10**Math.floor(Math.log10(target)),step=[1,2,5,10].map(n=>n*p).find(n=>n>=target),a=[];for(let i=Math.ceil(v.start/step);i*step<=v.start+v.span;i++)a.push(i*step);return {values:a,digits:Math.max(0,-Math.floor(Math.log10(step)))}}
@@ -110,9 +110,9 @@ function drawScene(target,v,s,list,w,h,scale=1,crop=null){
  }
  g.scale(scale,scale);g.translate(-area.x,-area.y);
  g.save();g.beginPath();g.rect(0,TOP,w,h-TOP-BOTTOM);g.clip();let last=-100;const px=(h-TOP-BOTTOM)/(v.hi-v.lo);g.font='11px system-ui';g.textBaseline='middle';
- for(let m=Math.floor(v.hi+.5);m>=Math.ceil(v.lo-.5);m--){const y=yAt(m,v,h),a=yAt(m+.5,v,h),b=yAt(m-.5,v,h),black=[1,3,6,8,10].includes((m%12+12)%12);g.fillStyle=mono?(black?'#1d1d1f':'#ffffff'):(black?'#24202f':'#d5d0df');g.fillRect(77,a,30,b-a);g.strokeStyle=mono?'#777777':'#61566f';g.lineWidth=1;g.strokeRect(77,a,30,b-a);
+ for(let m=Math.floor(v.hi+.5);m>=Math.ceil(v.lo-.5);m--){const y=yAt(m,v,h),a=yAt(m+.5,v,h),b=yAt(m-.5,v,h),black=[1,3,6,8,10].includes((m%12+12)%12);g.fillStyle=mono?(black?'#1d1d1f':'#ffffff'):(black?'#24202f':'#d5d0df');if(s.piano){g.fillRect(77,a,30,b-a);g.strokeStyle=mono?'#777777':'#61566f';g.lineWidth=1;g.strokeRect(77,a,30,b-a);}
   if(s.noteGrid){g.strokeStyle=mono?(m%12===0?'#00000032':'#00000016'):(m%12===0?'#ffffff55':'#ffffff29');g.beginPath();g.moveTo(LEFT,y);g.lineTo(w,y);g.stroke()}
-  if(y>=TOP&&y<=h-BOTTOM&&y-last>=12&&(px>=12||!black)){g.fillStyle=mono?'#1d1d1f':'#ddd4e9';g.textAlign='right';g.fillText(s.axis==='note'?note(m):hz(m).toFixed(hz(m)<100?1:0),70,y);last=y}
+  if(y>=TOP&&y<=h-BOTTOM&&y-last>=12&&(px>=12||!black)){g.fillStyle=mono?'#1d1d1f':'#ddd4e9';g.textAlign='right';g.fillText(s.axis.startsWith('note')?note(m):hz(m).toFixed(hz(m)<100?1:0),s.piano?70:103,y);last=y}
  }
  g.restore();const tick=ticks(v,w);g.font='11px system-ui';g.textAlign='center';g.textBaseline='top';
  for(const sec of tick.values){const x=xAt(sec,v,w);if(s.timeGrid){g.strokeStyle=mono?'#00000030':'#ffffff35';g.beginPath();g.moveTo(x,TOP);g.lineTo(x,h-BOTTOM);g.stroke()}if(x<=w-25){g.fillStyle=mono?'#1d1d1f':'#bbb0ca';g.fillText(formatTime(sec,tick.digits,s.clock),x,h-BOTTOM+8)}}
@@ -128,7 +128,7 @@ function selectionBox(x,y,w,h){ctx.save();ctx.strokeStyle='#d4b8ff';ctx.lineWidt
 function updateLevelUI(){
  const db=$('levelMode').value==='db';$('dbFloorControl').hidden=!db;$('levelLegend').hidden=!db||!$('panel3d').hidden;
  for(const id of ['gain','gainNumber','peakEnhance'])$(id).disabled=db;
- setText($('levelHelp'),db?'dbHelp':'cqtHelp');
+ setText($('levelHelp'),db?'dbHelp':'cqtHelp');$('pianoFeedback').hidden=!style().piano;
  if(db){const s=style(),colors=Array.from({length:25},(_,i)=>{const rgb=dbRGB(10**((s.dbFloor+i/24*-s.dbFloor)/20),s.palette==='reference'?null:palettes[s.palette],referenceRGB,s.dbFloor);return `rgb(${rgb.map(Math.round).join(',')})`});$('levelGradient').style.background=`linear-gradient(to right,${colors.join(',')})`;$('levelTicks').replaceChildren(...[s.dbFloor,s.dbFloor*2/3,s.dbFloor/3,0].map(n=>{const el=document.createElement('span');el.textContent=n;return el}))}
 }
 function resize(){canvas.width=Math.max(320,Math.floor(canvas.clientWidth));canvas.height=Math.max(400,Math.floor(canvas.clientHeight));W=canvas.width;H=canvas.height;changed()}new ResizeObserver(resize).observe(canvas);
@@ -164,7 +164,7 @@ function hitIndex(p){for(let i=annotations.length-1;i>=0;i--)if(hitObject(annota
 function draft(d){const pts=d.mode==='highlight'?d.points:[dataPoint({x:d.x,y:d.y},d.view),dataPoint({x:d.endX,y:d.endY},d.view)];return {type:d.mode,color:d.color,width:d.width,strokePixels:true,points:pts}}
 canvas.onpointerdown=e=>{
  if(!samples||e.button!==0||drag)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
- if(modeName!=='capture'&&x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){referenceKey(clamp(Math.round(pAt(y,view(),H)),16,135));return}
+ if(modeName!=='capture'&&style().piano&&x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){referenceKey(clamp(Math.round(pAt(y,view(),H)),16,135));return}
  if(modeName!=='capture'&&(x<LEFT||y<TOP||y>H-BOTTOM))return;
  const p=point(e,modeName==='capture');
  if(modeName==='text'&&!$('annotationText').value.trim()){setText($('toolHint'),'emptyText');$('annotationText').focus();return}
@@ -177,7 +177,7 @@ canvas.onpointerdown=e=>{
  canvas.setPointerCapture(e.pointerId);
 };
 canvas.onpointermove=e=>{
- if(!drag&&modeName!=='capture'){const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){canvas.style.cursor='pointer';return}}
+ if(!drag&&modeName!=='capture'){const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(style().piano&&x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){canvas.style.cursor='pointer';return}}
  if(!drag)canvas.style.cursor=modeName==='pan'?'grab':modeName==='text'?'text':modeName==='select'?'default':'crosshair';
  const p=point(e,drag?.mode==='capture');
  if(!drag){if(p.x>LEFT){setText($('readout'),'readout',{time:formatTime(tAt(p.x,view(),W)),hz:hz(pAt(p.y,view(),H)).toFixed(2),note:note(Math.round(pAt(p.y,view(),H)))});const frame=clamp(tAt(p.x,view(),W)*60,0,meta.rows-1),bin=clamp(pitchBin(pAt(p.y,view(),H)),0,959),db=style().levelMode==='db',value=db?amplitudeDB(intensity(frame,bin,levels)):intensity(frame,bin);$('readout').append(` · ${Number.isFinite(value)?value.toFixed(2):'−∞'} ${db?'dBFS':'CQT'}`)}if(modeName==='select')canvas.style.cursor=hitIndex(p)>=0?'move':'default';return}
@@ -287,11 +287,12 @@ function mountLabWorkbench(){
  top.append(quick);zoom.querySelectorAll('strong').forEach(el=>el.remove());
  const axes=document.createElement('div');axes.className='tools';axes.dataset.i18nAria='axes';
  for(const id of ['axis','axisSide3d','timeFormat','noteGrid','timeGrid'])axes.append($(id).closest('label'));
- const scaleControls=document.createElement('div');scaleControls.className='level-controls';scaleControls.innerHTML='<label><span data-i18n="levelScale"></span><select id="levelMode"><option value="cqt">CQT</option><option value="db" disabled>dBFS</option></select></label><label id="dbFloorControl" hidden><span data-i18n="dbRange"></span><select id="dbFloor"><option value="-60">−60 … 0 dBFS</option><option value="-90" selected>−90 … 0 dBFS</option><option value="-120">−120 … 0 dBFS</option></select></label><p id="levelHelp" class="muted"></p>';axes.prepend(scaleControls);
+ const scaleControls=document.createElement('div');scaleControls.className='level-controls';scaleControls.innerHTML='<label><span data-i18n="levelScale"></span><select id="levelMode"><option value="cqt">CQT</option><option value="db" disabled>dBFS</option></select></label><label id="dbFloorControl" hidden><span data-i18n="dbRange"></span><select id="dbFloor"><option value="-60">−60 … 0 dBFS</option><option value="-90" selected>−90 … 0 dBFS</option><option value="-120">−120 … 0 dBFS</option></select></label><p class="muted" data-i18n="levelCompare"></p><p id="levelHelp" class="muted"></p>';axes.prepend(scaleControls);
  const legend=document.createElement('div');legend.id='levelLegend';legend.hidden=true;legend.innerHTML='<span>dBFS</span><div id="levelGradient"></div><span id="levelTicks"></span>';canvas.after(legend);
  const pianoHelp=document.createElement('p');pianoHelp.id='pianoFeedback';pianoHelp.className='muted';pianoHelp.setAttribute('role','status');pianoHelp.dataset.i18n='pianoHint';axes.append(pianoHelp);
  const ink3dHint=document.createElement('p');ink3dHint.id='ink3dHint';ink3dHint.className='muted';ink3dHint.dataset.i18n='annotation3dHint';annotation.append(ink3dHint);
  appearance.append(gainLabel,gainNumber);
+ const export3d=document.createElement('div');export3d.className='tools';export3d.append($('png3d'));
  const controls3d=[...panel3d.querySelectorAll(':scope > .tools')];
  if(controls3d.length!==1)throw Error('Missing 3D controls');
  const specs=[
@@ -299,7 +300,7 @@ function mountLabWorkbench(){
   ['axis','axes','▦',[axes]],
   ['zoom','zoom','⌕',[zoom]],
   ['draw','draw','✎',[annotation]],
-  ['export','export','↓',[capture]],
+  ['export','export','↓',[capture,export3d]],
   ['three','three','◇',controls3d]
  ];
  const buttons=new Map(),panels=new Map(),sections=new Map();let active=null;
@@ -325,7 +326,7 @@ function mountLabWorkbench(){
   e.preventDefault();const visible=[...buttons].filter(([id])=>!sections.get(id).hidden).map(([,button])=>button);
   const cur=visible.indexOf(e.target),i=e.key==='Home'?0:e.key==='End'?visible.length-1:(cur+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length;visible[i]?.focus();
  });
- const sync=()=>{const is3d=!panel3d.hidden;$('levelLegend').hidden=is3d||$('levelMode').value!=='db';sections.get('export').hidden=is3d;sections.get('three').hidden=!is3d;$('axisSide3d').closest('label').hidden=!is3d;ink3dHint.hidden=!is3d;if(active&&sections.get(active).hidden)select(is3d?'three':'colors')};
+ const sync=()=>{const is3d=!panel3d.hidden;$('levelLegend').hidden=is3d||$('levelMode').value!=='db';capture.hidden=is3d;export3d.hidden=!is3d;sections.get('three').hidden=!is3d;$('axisSide3d').closest('label').hidden=!is3d;ink3dHint.hidden=!is3d;if(active&&sections.get(active).hidden)select(is3d?'three':'colors')};
  new MutationObserver(sync).observe(panel3d,{attributes:true,attributeFilter:['hidden']});sync();
 }
 mountLabWorkbench();

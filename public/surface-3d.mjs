@@ -1,5 +1,5 @@
 import {dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
-import {t,setText} from './i18n.mjs?v=memory-1';
+import {t,setText} from './i18n.mjs?v=axes-2';
 import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=db-1';
 import {createSurfaceAnnotations} from './surface-annotations.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
@@ -95,12 +95,13 @@ export function createSurface(getData,plot){
   for(let n=Math.ceil(v.lo-.5);n<=Math.floor(v.hi+.5);n++){
    const low=yForNote(Math.max(v.lo,n-.5)),high=yForNote(Math.min(v.hi,n+.5));if(high<=low)continue;
    const corners=[[keysInner,low,-.6],[keysOuter,low,-.6],[keysOuter,high,-.6],[keysInner,high,-.6]].map(screenProject);
-   keys.push({midi:n,corners:corners.map(p=>({x:(p[0]+1)*w/2,y:(1-p[1])*h/2}))});
+   if(data.style.piano){keys.push({midi:n,corners:corners.map(p=>({x:(p[0]+1)*w/2,y:(1-p[1])*h/2}))});
    c.beginPath();corners.forEach((p,i)=>{const x=(p[0]+1)*w/2,y=(1-p[1])*h/2;i?c.lineTo(x,y):c.moveTo(x,y)});c.closePath();
-   const black=[1,3,6,8,10].includes((n%12+12)%12);c.fillStyle=black?'#252832':'#f4f4f6';c.fill();c.strokeStyle='#737782';c.lineWidth=.65;c.stroke();
+   const black=[1,3,6,8,10].includes((n%12+12)%12);c.fillStyle=black?'#252832':'#f4f4f6';c.fill();c.strokeStyle='#737782';c.lineWidth=.65;c.stroke();}
+   const black=[1,3,6,8,10].includes((n%12+12)%12);
    if(n<v.lo||n>v.hi||black&&density<13)continue;
-   const anchor=[2.27*side,yForNote(n),-.6];
-   c.fillStyle=mono?'#1d1d1f':'#e7e0f4';label(anchor,data.style.axis==='hz'?(440*2**((n-69)/12)).toFixed(n<36?1:0)+' Hz':names[(n%12+12)%12]+(Math.floor(n/12)-1),true);
+   const anchor=[(data.style.piano?2.27:2.06)*side,yForNote(n),-.6];
+   c.fillStyle=mono?'#1d1d1f':'#e7e0f4';label(anchor,data.style.axis.startsWith('hz')?(440*2**((n-69)/12)).toFixed(n<36?1:0)+' Hz':names[(n%12+12)%12]+(Math.floor(n/12)-1),true);
   }
   function hiDensity(){const a=screenProject([keysOuter,-1.5,-.6]),b=screenProject([keysOuter,1.5,-.6]);return Math.hypot((a[0]-b[0])*w/2,(a[1]-b[1])*h/2)/(v.hi-v.lo)}
   c.fillStyle=mono?'#1d1d1f':'#e7e0f4';c.font='12px system-ui';
