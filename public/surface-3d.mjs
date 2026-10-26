@@ -1,5 +1,5 @@
 import {dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
-import {t,setText} from './i18n.mjs?v=1.0.0';
+import {t,setText} from './i18n.mjs?v=1.0.1';
 import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=db-1';
 import {createSurfaceAnnotations} from './surface-annotations.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
@@ -126,6 +126,7 @@ export function createSurface(getData,plot){
  canvas.onpointerdown=e=>{if(e.button!==0||!mesh||lost)return;const key=keys.find(k=>insidePolygon(pixel(e),k.corners));if(key){getData().playReference(key.midi);return}if(ink.down(e))return;canvas.focus();const p=hit(e);drag={x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,orbit:e.shiftKey,moved:false,point:p,view:{...getData().view}};canvas.setPointerCapture(e.pointerId)};
  canvas.onpointermove=e=>{
   if(!drag&&!ink.dragging&&keys.some(k=>insidePolygon(pixel(e),k.corners))){canvas.style.cursor='pointer';return}
+  if(!drag&&!ink.dragging){const p=hit(e);if(p)getData().rememberCursor?.(getData().view.start+(p[0]+2)/4*getData().view.span)}
   if(ink.move(e))return;
   if(!drag)return;const d=drag,dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>3)d.moved=true;if(!d.moved)return;
   if(d.orbit){yaw=(yaw+(e.clientX-d.lastX)*.5+360)%360;pitch=clamp(pitch+(e.clientY-d.lastY)*.4,-85,85);controls();schedule()}
@@ -143,5 +144,5 @@ export function createSurface(getData,plot){
  new ResizeObserver(()=>{drag=null;ink.cancel();schedule()}).observe(canvas);
  $('png3d').onclick=()=>{if(needsBuild){rebuild();needsBuild=false}render(false);const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const c=out.getContext('2d');c.drawImage(canvas,0,0);c.drawImage(labels,0,0);out.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='spectrogram-3d.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),10000)},'image/png');schedule()};
  let lastFrame='';
- return {anchorObject:a=>({...a,points:a.points.map(p=>({...p,h:annotationProject(p).raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor}))}),inspect:()=>({yaw,pitch,height,distance:cameraDistance(),framing:{...framing},view:{...v},nx:mesh?.nx,ny:mesh?.ny,levelMode:getData()?.style.levelMode,dbFloor:getData()?.style.dbFloor}),pasteOffset:point=>{const p=annotationProject(point);if(p.x>=0&&p.x<canvas.clientWidth-36&&p.y>=0&&p.y<canvas.clientHeight-36){const next=annotationPoint({x:p.x+18,y:p.y+18},p.raw,false);if(next)return {dt:next.t-point.t,dm:next.m-point.m}}return {dt:v.start+v.span*.5-point.t,dm:(v.lo+v.hi)/2-point.m}},repaint:()=>schedule(),cancelAnnotation:()=>ink.cancel(),get annotating(){return ink.dragging},update:()=>{ink.cancel();schedule(true)},frame:()=>{if(!enabled)return;const d=getData();if(!d)return;const key=[Math.floor(d.audio.currentTime*30),d.audio.paused,d.follow.checked,d.style.clock].join(':');if(key===lastFrame)return;lastFrame=key;schedule()}};
+ return {setEnabled:setMode,anchorObject:a=>({...a,points:a.points.map(p=>({...p,h:annotationProject(p).raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor}))}),inspect:()=>({yaw,pitch,height,distance:cameraDistance(),framing:{...framing},view:{...v},nx:mesh?.nx,ny:mesh?.ny,levelMode:getData()?.style.levelMode,dbFloor:getData()?.style.dbFloor}),pasteOffset:point=>{const p=annotationProject(point);if(p.x>=0&&p.x<canvas.clientWidth-36&&p.y>=0&&p.y<canvas.clientHeight-36){const next=annotationPoint({x:p.x+18,y:p.y+18},p.raw,false);if(next)return {dt:next.t-point.t,dm:next.m-point.m}}return {dt:v.start+v.span*.5-point.t,dm:(v.lo+v.hi)/2-point.m}},repaint:()=>schedule(),cancelAnnotation:()=>ink.cancel(),get annotating(){return ink.dragging},update:()=>{ink.cancel();schedule(true)},frame:()=>{if(!enabled)return;const d=getData();if(!d)return;const key=[Math.floor(d.audio.currentTime*30),d.audio.paused,d.follow.checked,d.style.clock].join(':');if(key===lastFrame)return;lastFrame=key;schedule()}};
 }
