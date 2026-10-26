@@ -11,7 +11,7 @@ try{
  const settle=()=>v.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
  await v.locator('#lab-button-axis').click();assert.equal(await v.locator('#axis option').count(),4);
- assert.match(await v.locator('[data-i18n=levelCompare]').textContent(),/CQT.*dBFS/);
+ assert.match(await v.locator('[data-i18n=levelCompare]').textContent(),/CQT.*dBFS/s);
 
  for(const mode of ['2d','3d']){
   await v.locator('#mode'+mode).click();await v.locator('#lab-button-axis').click();
@@ -22,6 +22,6 @@ try{
   await v.locator('#lab-button-export').click();assert.equal(await v.locator('#png3d').isVisible(),mode==='3d');assert.equal(await v.locator('#capture').isVisible(),mode==='2d');
   if(mode==='3d'){assert.equal(await v.locator('#lab-panel-three #png3d').count(),0);const [download]=await Promise.all([page.waitForEvent('download'),v.locator('#png3d').click()]);assert.equal(download.suggestedFilename(),'spectrogram-3d.png')}
  }
- for(const lang of ['th','en']){await v.locator('[data-language='+lang+']').click();await v.locator('#lab-button-colors').click();assert(!/Aurora/.test(await v.locator('[data-i18n=peak]').textContent()));assert(!/linear/.test(await v.locator('[data-i18n=gain]').textContent()));await v.locator('#lab-button-axis').click();assert.match(await v.locator('[data-i18n=levelCompare]').textContent(),/CQT.*dBFS/)}
+ for(const lang of ['th','en']){await v.locator('[data-language='+lang+']').click();await v.locator('#lab-button-colors').click();assert(!/Aurora/.test(await v.locator('[data-i18n=peak]').textContent()));assert(!/linear/.test(await v.locator('[data-i18n=gain]').textContent()));await v.locator('#lab-button-axis').click();assert.match(await v.locator('[data-i18n=levelCompare]').textContent(),/CQT.*dBFS/s)}
  await page.screenshot({path:'test-results/axes-only-3d.png'});assert.deepEqual(errors,[]);console.log('PASS: four axis choices, keyboard visibility, bilingual labels/comparison, separate 3D PNG export and mode switching');
 }finally{await browser.close()}
