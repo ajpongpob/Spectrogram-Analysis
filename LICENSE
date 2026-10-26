@@ -15,16 +15,28 @@ to the extent owned by Pongpob Sukittiwong. No third-party work is covered.
 2. PERMITTED EDUCATIONAL AND RESEARCH USE
 Users may access and run the official, unmodified MuSpec Lab application
 without charge for non-commercial education, teaching, scholarly research,
-and music/audio analysis. Users may retain their analysis results and
-reproduce resulting spectrograms, charts and screenshots in non-commercial
+and music/audio analysis, PROVIDED THAT MuSpec Lab is attributed for
+EVERY such use under Section 3, including internal, unpublished, classroom,
+teaching, exploratory, and personal academic uses. Attribution is a
+condition of this limited permission, not merely of publication.
+Users may retain their analysis results and reproduce resulting
+spectrograms, charts and screenshots in non-commercial
 course materials, theses, research reports, conference presentations and
 academic journal articles, including those issued by commercial academic
 publishers, with attribution under section 3. No right to third-party audio,
 recordings or compositions is granted by this software license.
 
 3. ATTRIBUTION REQUIREMENT
-When distributing or publishing analyses or results made using MuSpec Lab,
-acknowledge the tool, developer and URL clearly. Suggested reference:
+For EVERY permitted use of the official MuSpec Lab application, including
+teaching, learning, research and music/audio analysis whether or not the
+results are published, the user MUST acknowledge MuSpec Lab as the software
+source, clearly identifying its name, author and official URL. For work
+not intended for external publication, record this attribution in the
+relevant classroom materials, analysis notes, project records, working
+files or other reasonable documentation associated with that use.
+For publicly presented or published work, display the attribution in
+the relevant citation list, methodology section, figure caption, course
+materials or presentation. Suggested reference:
 Sukittiwong, P. (2026). MuSpec Lab (version 1.0.0) [Web application].
 https://ajpongpob.github.io/Spectrogram-Analysis/
 Where important for reproducibility, state software version, date accessed,

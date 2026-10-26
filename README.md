@@ -66,8 +66,11 @@ bzip2 licence in `public/BZIP2-LICENSE.txt`.
 Copyright © 2026 Pongpob Sukittiwong in **original MuSpec Lab materials**.
 All rights reserved except as provided in [LICENSE](LICENSE): using the
 unmodified official tool for non-commercial educational and academic research
-purposes is allowed with attribution; generated figures and research outputs
-may be published academically with citation. Unauthorized commercial use,
+purposes is allowed **only with attribution for every use**, including
+unpublished classroom, teaching, learning, research and analysis activities.
+Record the attribution in the relevant teaching material, research notes,
+analysis records or publication as applicable; generated figures and research
+outputs may be published academically with citation. Unauthorized commercial use,
 reproduction, redistribution or modification of the original MuSpec Lab
 source/interface requires advance written permission.
 
