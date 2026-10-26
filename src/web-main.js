@@ -1,6 +1,6 @@
 import './lab.css';
 import {analysisMemory} from './analysis-memory.mjs';
-const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=scale-copy-1',document.baseURI).href);
+const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=1.0.0',document.baseURI).href);
 const $=id=>document.getElementById(id),drop=$('drop-zone'),input=$('file-input');
 initLanguage();
 let worker,jobId=0,frame,pending;
@@ -28,7 +28,7 @@ async function analyse(file){reset();const id=jobId;$('job').hidden=false;drop.h
   progress(5,'analysing');worker=new Worker(new URL('./analysis-worker.js',import.meta.url),{type:'module'});
   worker.onmessage=({data})=>{if(id!==jobId)return;if(data.type==='progress')progress(5+90*data.value,'analysisProgress',{seconds:Math.floor(data.seconds),duration:Math.ceil(duration)});
    if(data.type==='error')failure(Error(data.message));
-   if(data.type==='done'){worker.terminate();worker=null;pending={...data,type:'analysis-ready',audio:file,key,name:file.name};progress(97,'opening');frame=document.createElement('iframe');frame.dataset.i18nTitle='viewerTitle';frame.title=t('viewerTitle');frame.src=new URL('./viewer.html?v=scale-copy-1',document.baseURI).href;frame.allow='clipboard-read; clipboard-write; fullscreen';frame.allowFullscreen=true;$('viewer-host').replaceChildren(frame);$('viewer-host').hidden=false;$('cancel').hidden=true}
+   if(data.type==='done'){worker.terminate();worker=null;pending={...data,type:'analysis-ready',audio:file,key,name:file.name};progress(97,'opening');frame=document.createElement('iframe');frame.dataset.i18nTitle='viewerTitle';frame.title=t('viewerTitle');frame.src=new URL('./viewer.html?v=1.0.0',document.baseURI).href;frame.allow='clipboard-read; clipboard-write; fullscreen';frame.allowFullscreen=true;$('viewer-host').replaceChildren(frame);$('viewer-host').hidden=false;$('cancel').hidden=true}
   };
   worker.onerror=e=>{if(id===jobId)failure(Error(e.message||t('failed')))};
   worker.postMessage({left:left.buffer,right:right.buffer,sampleRate},[...new Set([left.buffer,right.buffer])]);

@@ -1,5 +1,5 @@
 import {dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
-import {t,setText} from './i18n.mjs?v=scale-copy-1';
+import {t,setText} from './i18n.mjs?v=1.0.0';
 import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=db-1';
 import {createSurfaceAnnotations} from './surface-annotations.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';

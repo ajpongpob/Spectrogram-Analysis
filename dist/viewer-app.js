@@ -3,8 +3,8 @@ import {amplitudeDB,dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
 import {drawAnnotations} from './annotation-render.mjs?v=db-1';
 import {playReferenceNote} from './piano-reference.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=scale-copy-1';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=scale-copy-1';
+import {createSurface} from './surface-3d.mjs?v=1.0.0';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=1.0.0';
 import {validAnnotation,strokeWidth,strokeTypes,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=db-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
@@ -128,7 +128,7 @@ function selectionBox(x,y,w,h){ctx.save();ctx.strokeStyle='#d4b8ff';ctx.lineWidt
 function updateLevelUI(){
  const db=$('levelMode').value==='db';$('dbFloorControl').hidden=!db;$('levelLegend').hidden=!db||!$('panel3d').hidden;
  for(const id of ['gain','gainNumber','peakEnhance'])$(id).disabled=db;
- setText($('levelHelp'),db?'dbHelp':'cqtHelp');$('pianoFeedback').hidden=!style().piano;
+ $('levelHelp').hidden=!db;setText($('levelHelp'),'dbHelp');$('pianoFeedback').hidden=!style().piano;
  if(db){const s=style(),colors=Array.from({length:25},(_,i)=>{const rgb=dbRGB(10**((s.dbFloor+i/24*-s.dbFloor)/20),s.palette==='reference'?null:palettes[s.palette],referenceRGB,s.dbFloor);return `rgb(${rgb.map(Math.round).join(',')})`});$('levelGradient').style.background=`linear-gradient(to right,${colors.join(',')})`;$('levelTicks').replaceChildren(...[s.dbFloor,s.dbFloor*2/3,s.dbFloor/3,0].map(n=>{const el=document.createElement('span');el.textContent=n;return el}))}
 }
 function resize(){canvas.width=Math.max(320,Math.floor(canvas.clientWidth));canvas.height=Math.max(400,Math.floor(canvas.clientHeight));W=canvas.width;H=canvas.height;changed()}new ResizeObserver(resize).observe(canvas);
@@ -334,7 +334,7 @@ $('levelMode').onchange=()=>{cancelDrag();changed()};$('dbFloor').onchange=chang
 initLanguage();syncSelection();
 window.addEventListener('lab-language-change',()=>{syncSelection(false);syncZoom(false);updateLevelUI();surface.update()});
 syncZoom();if(payload){loadInk();init()}else{
- window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;sourceName=d.name||sourceName;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);levels=d.levels?new Float32Array(d.levels):null;if(levels&&levels.length!==samples.length)throw Error(t('dataError'));$('levelMode').querySelector('[value=db]').disabled=!levels;rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error(t('dataError'));if(samples.length!==meta.rows*960)throw Error(t('dataError'));storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · MuSpec Lab V0.7';setText($('status'),'ready');syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
+ window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;sourceName=d.name||sourceName;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);levels=d.levels?new Float32Array(d.levels):null;if(levels&&levels.length!==samples.length)throw Error(t('dataError'));$('levelMode').querySelector('[value=db]').disabled=!levels;rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error(t('dataError'));if(samples.length!==meta.rows*960)throw Error(t('dataError'));storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · MuSpec Lab v1.0.0';setText($('status'),'ready');syncZoom();resize();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
  new ResizeObserver(()=>parent.postMessage({type:'viewer-height',height:document.body.scrollHeight},location.origin)).observe(document.body);
  parent.postMessage({type:'viewer-listening'},location.origin);
 }
