@@ -59,3 +59,28 @@ a Pages workflow in `.github/workflows/static.yml`.
 The ShowCQT engine is LGPL-3.0-or-later. See `public/COPYING` and
 `public/COPYING.LESSER`. The bzip2 WebAssembly wrapper retains the original
 bzip2 licence in `public/BZIP2-LICENSE.txt`.
+
+
+## Licensing and academic use
+
+Copyright © 2026 Pongpob Sukittiwong in **original MuSpec Lab materials**.
+All rights reserved except as provided in [LICENSE](LICENSE): using the
+unmodified official tool for non-commercial educational and academic research
+purposes is allowed **only with attribution for every use**, including
+unpublished classroom, teaching, learning, research and analysis activities.
+Record the attribution in the relevant teaching material, research notes,
+analysis records or publication as applicable; generated figures and research
+outputs may be published academically with citation. Unauthorized commercial use,
+reproduction, redistribution or modification of the original MuSpec Lab
+source/interface requires advance written permission.
+
+**Third-party rights are not restricted:** ShowCQT/showcqt-js and its JS/WASM
+files remain under LGPL-3.0-or-later and may be used, modified and shared
+subject to that license. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md),
+`public/COPYING`, `public/COPYING.LESSER`, and `public/BZIP2-LICENSE.txt`.
+
+Website terms (Thai and English):
+https://ajpongpob.github.io/Spectrogram-Analysis/license.html
+
+Recommended citation: Sukittiwong, P. (2026). *MuSpec Lab* (v1.0.0)
+[Web application]. https://ajpongpob.github.io/Spectrogram-Analysis/
