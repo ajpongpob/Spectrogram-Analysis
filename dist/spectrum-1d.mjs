@@ -1,5 +1,5 @@
-import {setText} from './i18n.mjs?v=1.0.1';
-import {binHz,frameAt,findPeaks,noteLabel,sliceCSV} from './spectrum-math.mjs?v=1.0.1';
+import {setText} from './i18n.mjs?v=1.0.1-playhead';
+import {binHz,frameAt,findPeaks,noteLabel,sliceCSV} from './spectrum-math.mjs?v=1.0.1-playhead';
 import {amplitudeDB,dbUnit} from './signal-level.mjs?v=db-1';
 export function createSpectrum(getData){
  const panel=document.createElement('section');panel.id='panel1d';panel.hidden=true;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','mode1d');

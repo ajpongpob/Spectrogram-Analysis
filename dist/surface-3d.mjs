@@ -1,5 +1,5 @@
 import {dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
-import {t,setText} from './i18n.mjs?v=1.0.1';
+import {t,setText} from './i18n.mjs?v=1.0.1-playhead';
 import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=db-1';
 import {createSurfaceAnnotations} from './surface-annotations.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
@@ -126,7 +126,6 @@ export function createSurface(getData,plot){
  canvas.onpointerdown=e=>{if(e.button!==0||!mesh||lost)return;const key=keys.find(k=>insidePolygon(pixel(e),k.corners));if(key){getData().playReference(key.midi);return}if(ink.down(e))return;canvas.focus();const p=hit(e);drag={x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,orbit:e.shiftKey,moved:false,point:p,view:{...getData().view}};canvas.setPointerCapture(e.pointerId)};
  canvas.onpointermove=e=>{
   if(!drag&&!ink.dragging&&keys.some(k=>insidePolygon(pixel(e),k.corners))){canvas.style.cursor='pointer';return}
-  if(!drag&&!ink.dragging){const p=hit(e);if(p)getData().rememberCursor?.(getData().view.start+(p[0]+2)/4*getData().view.span)}
   if(ink.move(e))return;
   if(!drag)return;const d=drag,dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>3)d.moved=true;if(!d.moved)return;
   if(d.orbit){yaw=(yaw+(e.clientX-d.lastX)*.5+360)%360;pitch=clamp(pitch+(e.clientY-d.lastY)*.4,-85,85);controls();schedule()}

@@ -1,11 +1,11 @@
-import {createSpectrum} from './spectrum-1d.mjs?v=1.0.1';
+import {createSpectrum} from './spectrum-1d.mjs?v=1.0.1-playhead';
 'use strict';
 import {amplitudeDB,dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
 import {drawAnnotations} from './annotation-render.mjs?v=db-1';
 import {playReferenceNote} from './piano-reference.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=1.0.1';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=1.0.1';
+import {createSurface} from './surface-3d.mjs?v=1.0.1-playhead';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=1.0.1-playhead';
 import {validAnnotation,strokeWidth,strokeTypes,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=db-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
@@ -14,8 +14,7 @@ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const hz=m=>440*2**((m-69)/12),note=m=>names[((m%12)+12)%12]+(Math.floor(m/12)-1);
 const binPitch=b=>15.5+(b+.5)/8,pitchBin=m=>(m-15.5)*8-.5;
 let sourceName='spectrogram',samples,levels,peaks,rawEncoding=false,start=10,span=10,lo=15.5,hi=135.5,W=1000,H=700,dirty=true,lastPlay=-1,drag=null,modeName='pan';
-let spectrum,viewMode='2d',cursorTime=null;
-const rememberCursor=time=>{if(Number.isFinite(time))cursorTime=clamp(time,0,meta.duration)};
+let spectrum,viewMode='2d';
 const cached=document.createElement('canvas');
 const view=()=>({start,span,lo,hi});
 const yAt=(m,v,h)=>TOP+(v.hi-m)/(v.hi-v.lo)*(h-TOP-BOTTOM);
@@ -183,7 +182,6 @@ canvas.onpointermove=e=>{
  if(!drag&&modeName!=='capture'){const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(style().piano&&x>=77&&x<107&&y>=TOP&&y<=H-BOTTOM){canvas.style.cursor='pointer';return}}
  if(!drag)canvas.style.cursor=modeName==='pan'?'grab':modeName==='text'?'text':modeName==='select'?'default':'crosshair';
  const p=point(e,drag?.mode==='capture');
- const bounds=canvas.getBoundingClientRect(),py=(e.clientY-bounds.top)*H/bounds.height;if(!drag&&p.x>LEFT&&py>=TOP&&py<=H-BOTTOM)rememberCursor(tAt(p.x,view(),W));
  if(!drag){if(p.x>LEFT){setText($('readout'),'readout',{time:formatTime(tAt(p.x,view(),W)),hz:hz(pAt(p.y,view(),H)).toFixed(2),note:note(Math.round(pAt(p.y,view(),H)))});const frame=clamp(tAt(p.x,view(),W)*60,0,meta.rows-1),bin=clamp(pitchBin(pAt(p.y,view(),H)),0,959),db=style().levelMode==='db',value=db?amplitudeDB(intensity(frame,bin,levels)):intensity(frame,bin);$('readout').append(` · ${Number.isFinite(value)?value.toFixed(2):'−∞'} ${db?'dBFS':'CQT'}`)}if(modeName==='select')canvas.style.cursor=hitIndex(p)>=0?'move':'default';return}
  const d=drag;
  if(e.shiftKey&&['rect','ellipse'].includes(d.mode)){const sx=p.x<d.x?-1:1,sy=p.y<d.y?-1:1,side=Math.min(Math.max(Math.abs(p.x-d.x),Math.abs(p.y-d.y)),sx>0?W-d.x:d.x-LEFT,sy>0?H-BOTTOM-d.y:d.y-TOP);p.x=d.x+sx*side;p.y=d.y+sy*side}
@@ -249,16 +247,17 @@ const annotationBridge={
  emptyText(){setText($('toolHint'),'emptyText');$('annotationText').focus()},
  miss(){setText($('toolHint'),'annotation3dMiss')}
 };
-const surface=createSurface(()=>samples&&rawEncoding?{annotation:annotationBridge,playReference:referenceKey,rememberCursor,samples,levels,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
+const surface=createSurface(()=>samples&&rawEncoding?{annotation:annotationBridge,playReference:referenceKey,samples,levels,peaks,rows:meta.rows,view:view(),style:style(),palettes,audio,duration:meta.duration,formatTime,zoomTime,zoomPitch,seekAt:t=>{audio.currentTime=clamp(t,0,meta.duration)},pan:(v,dt,dm)=>{manual();setTime(v.start+dt,v.span);setPitch(v.lo+dm,v.hi-v.lo);syncZoom()},seek:t=>{audio.currentTime=t;position(t)},follow:$('follow')}:null,canvas);
 window.viewerTest.surface=()=>surface.inspect();
 let sliceLutKey='',sliceLut;
 function sliceColors(){const s=style(),key=JSON.stringify(s);if(key!==sliceLutKey){sliceLutKey=key;sliceLut=colorLut(s)}return sliceLut}
-spectrum=createSpectrum(()=>samples?{samples,levels,rows:meta.rows,duration:meta.duration,audio,view:view(),style:style(),lut:sliceColors(),name:sourceName,seek:time=>{rememberCursor(time);audio.currentTime=time;$('seek').value=time}}:null);
+spectrum=createSpectrum(()=>samples?{samples,levels,rows:meta.rows,duration:meta.duration,audio,view:view(),style:style(),lut:sliceColors(),name:sourceName,seek:time=>{audio.currentTime=time;$('seek').value=time}}:null);
 canvas.before(spectrum.panel);
 const sliceTab=document.createElement('button');sliceTab.id='mode1d';sliceTab.setAttribute('role','tab');sliceTab.setAttribute('aria-selected','false');sliceTab.setAttribute('aria-controls','panel1d');sliceTab.tabIndex=-1;sliceTab.dataset.i18n='mode1d';$('mode2d').before(sliceTab);
 function switchView(next){
  if(!samples)return;cancelDrag();
- if(next==='1d'&&viewMode!=='1d'){const target=cursorTime??audio.currentTime;audio.pause();audio.currentTime=target;$('seek').value=target}
+ // Preserve the shared playhead; pointer hover only updates the readout.
+ if(next==='1d'&&viewMode!=='1d'){audio.pause();$('seek').value=audio.currentTime}
  viewMode=next;surface.setEnabled(next==='3d');spectrum.panel.hidden=next!=='1d';canvas.style.display=next==='2d'?'block':'none';
  for(const id of ['readout','gestureHint'])$(id).hidden=next!=='2d';
  for(const id of ['1d','2d','3d']){$('mode'+id).setAttribute('aria-selected',String(id===next));$('mode'+id).tabIndex=id===next?0:-1}
@@ -266,8 +265,8 @@ function switchView(next){
 }
 for(const id of ['1d','2d','3d'])$('mode'+id).onclick=()=>switchView(id);
 document.querySelector('.view-tabs').onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)||!e.target.matches('[role=tab]'))return;e.preventDefault();const modes=['1d','2d','3d'],i=modes.indexOf(viewMode),next=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;switchView(modes[next]);$('mode'+modes[next]).focus()};
-audio.addEventListener('seeking',()=>{rememberCursor(audio.currentTime);spectrum.update()});
-window.viewerTest.spectrum=()=>({...spectrum.inspect(),cursorTime,mode:viewMode});
+audio.addEventListener('seeking',()=>spectrum.update());
+window.viewerTest.spectrum=()=>({...spectrum.inspect(),playheadTime:audio.currentTime,mode:viewMode});
 
 function isExpanded(){return !!document.fullscreenElement||$('lab-stage')?.classList.contains('expanded')}
 async function leaveFullscreen(){

@@ -1,0 +1,10 @@
+<button id="verifyPlayhead" style="position:fixed;right:12px;bottom:12px;z-index:99999">Verify hover preserves playhead</button><pre id="playheadReport" style="position:fixed;left:20px;bottom:12px;background:white;z-index:99999;padding:10px"></pre><script>
+document.querySelector('#verifyPlayhead').onclick=()=>{
+ const doc=document.querySelector('iframe').contentDocument,a=doc.querySelector('audio'),before=a.currentTime;
+ const mode=doc.querySelector('[role=tab][aria-selected=true]').id;
+ const plot=doc.querySelector(mode==='mode3d'?'#surface3d':'#plot'),r=plot.getBoundingClientRect();
+ for(const u of [.3,.8,.95])plot.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,clientX:r.left+r.width*u,clientY:r.top+r.height*.5}));
+ doc.querySelector('#mode1d').click();const after=a.currentTime,frameTime=parseFloat(doc.querySelector('#sliceTime').textContent);
+ const expected=Math.min(Math.ceil(a.duration*60)-1,Math.round(before*60))/60;
+ document.querySelector('#playheadReport').textContent=JSON.stringify({pass:before===after&&Math.abs(frameTime-expected)<.0006,from:mode,before,after,frameTime,expected},null,2);
+};</script>
