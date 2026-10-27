@@ -1,4 +1,4 @@
-# MuSpec Lab v1.0.0
+# MuSpec Lab v1.0.1
 
 Drop an MP3 or WAV into the main page to analyse and explore it in the browser.
 The worker returns transferable Float32 CQT data directly to the viewer. Audio
@@ -55,3 +55,11 @@ The Axes & grid section contains 3D pitch-axis placement. Annotate now works in 
 ## Signal level scales
 
 Choose **CQT** or **dBFS** under **Axes & grid → Signal level scale**. The selection applies to both 2D and 3D. dBFS adds a 2D color scale and a 3D height scale with a configurable display floor. It uses an independent, unfiltered, per-bin sine-calibrated analysis with a fixed digital reference; it is not dB SPL. CQT data and rendering remain available unchanged. Details and measurement limits are in `docs/3D-VIEWER.md`.
+
+## 1D frequency slice (v1.0.1)
+
+The view tabs are ordered 1D, 2D, 3D; 2D remains the initial view. All three use the same analysis matrices, audio player, time cursor, frequency range and palette. Point at the 2D plot or a visible 3D surface point, then switch to 1D to inspect that time. 3D picking uses the existing perspective-correct surface intersection. Entering 1D pauses playback and chooses the nearest available 60 fps frame (at most 8.33 ms from an interior time; clamped at the recording boundaries). Without a selected point, the current playback time is used.
+
+1D supports CQT and calibrated per-band dBFS, the five existing palettes, logarithmic/linear frequency axes, previous/next frame, numeric time entry, spectral peak readouts, playback, fullscreen, PNG and 960-bin CSV export. The audio window and spectral resolution are those of ShowCQT; a time slice does not imply sample-level temporal resolution. Peak note labels are nearest-note references, not polyphonic transcription. Existing annotations remain available in 2D/3D.
+
+Run `pnpm test:1d` for nearest-frame boundaries, known tone bins, CQT/dBFS conversion, silence and source-array immutability. `pnpm test:3d`, `pnpm test:db` and `pnpm test:reference` cover unchanged picking, calibration and palette behavior. The local browser review uses generated 220/440/880 Hz WAV audio; temporary review pages are excluded from the deployment.
