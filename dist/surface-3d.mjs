@@ -1,25 +1,25 @@
 import {dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
-import {t,setText} from './i18n.mjs?v=1.0.1-playhead';
+import {t,setText} from './i18n.mjs?v=stereo-1';
 import {clamp,project,heightOf,meshIndices,meshSamples,pickSurface,fitFrame,unprojectPlane,meshRawAt,insidePolygon} from './surface-math.mjs?v=db-1';
 import {createSurfaceAnnotations} from './surface-annotations.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
 
-export function createSurface(getData,plot){
+export function createSurface(getData,plot,options={}){
  const toolbar=document.createElement('nav');toolbar.className='view-tabs';toolbar.setAttribute('role','tablist');toolbar.dataset.i18nAria='viewModes';
  toolbar.innerHTML='<button id="mode2d" role="tab" aria-selected="true" aria-controls="plot" data-i18n="mode2d">2D</button><button id="mode3d" role="tab" aria-selected="false" aria-controls="panel3d" tabindex="-1" data-i18n="mode3d">3D</button><span id="modeHint" data-i18n="gestureHint"></span>';
- plot.closest('main').prepend(toolbar);
+ if(options.prefix){toolbar.hidden=true;plot.parentElement.prepend(toolbar)}else plot.closest('main').prepend(toolbar);
  const wrap=document.createElement('section');wrap.hidden=true;
  wrap.innerHTML=`<div class="tools"><label><span data-i18n="axisSide"></span><select id="axisSide3d"><option value="right" data-i18n="rightSide"></option><option value="left" data-i18n="leftSide"></option></select></label><label><span data-i18n="yaw"></span><input id="yaw3d" type="range" min="0" max="360" step="1" value="325"><output id="yawOut">325°</output></label><label><span data-i18n="tilt"></span><input id="pitch3d" type="range" min="-85" max="85" value="55"><output id="pitchAngleOut">55°</output></label><label><span data-i18n="height"></span><input id="height3d" type="range" min="0" max="2" step="0.05" value="1"><output id="heightOut">1.00×</output></label><button id="reset3d" data-i18n="reset3d"></button><button id="top3d" data-i18n="top3d"></button><button id="png3d" data-i18n="png3d"></button></div><p class="muted" data-i18n="hint3d"></p><div style="position:relative;height:600px;background:#090911;border:1px solid #e5e5e9;border-radius:8px;overflow:hidden"><canvas id="surface3d" data-i18n-aria="surfaceLabel" tabindex="0" style="width:100%;height:100%;touch-action:none;display:block"></canvas><canvas id="labels3d" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas></div><p id="status3d" role="status" class="muted"></p>`;
  wrap.id='panel3d';wrap.setAttribute('role','tabpanel');wrap.setAttribute('aria-labelledby','mode3d');
  plot.setAttribute('role','tabpanel');plot.setAttribute('aria-labelledby','mode2d');
- plot.before(wrap);const $=id=>document.getElementById(id),button=toolbar.querySelector('#mode3d'),button2d=toolbar.querySelector('#mode2d'),canvas=$('surface3d'),labels=$('labels3d');
- const only2d=[document.getElementById('capture').closest('.tools'),document.getElementById('boxZoom'),document.getElementById('readout')].filter(Boolean);
+ plot.before(wrap);const nodes=new Map([wrap,...toolbar.querySelectorAll('[id]'),...wrap.querySelectorAll('[id]')].map(el=>[el.id,el]));const $=id=>nodes.get(id),button=$('mode3d'),button2d=$('mode2d'),canvas=$('surface3d'),labels=$('labels3d');if(options.prefix){for(const [id,el] of nodes)el.id=options.prefix+id;wrap.removeAttribute('aria-labelledby');plot.removeAttribute('aria-labelledby');wrap.querySelector('.tools').hidden=true;}
+ const only2d=options.prefix?[]:[document.getElementById('capture').closest('.tools'),document.getElementById('boxZoom'),document.getElementById('readout')].filter(Boolean);
  // Explicitly identify the 2D gesture hint, without depending on sibling order.
- only2d.push(document.getElementById('gestureHint'));
+ if(!options.prefix)only2d.push(document.getElementById('gestureHint'));
  canvas.style.cursor='grab';
  let pickPoints=[],pickIndices=[],framing={scale:1,x:0,y:0},frameKey='',geometryVersion=0,viewZoom=1;
  function screenProject(point){const p=project(point,yaw,pitch,cameraDistance(),canvas.clientWidth/canvas.clientHeight);return [(p[0]-framing.x)*framing.scale,(p[1]-framing.y)*framing.scale,p[2]]}
- function fitScene(){if(drag&&!drag.orbit)return;const aspect=canvas.clientWidth/canvas.clientHeight,key=[yaw,pitch,height,aspect,geometryVersion,viewZoom].join(':');if(key===frameKey)return;frameKey=key;const markers=[];for(const x of [-2.45,2.45])for(const y of [-1.9,1.7])markers.push([x,y,-.6]);markers.push([-2.15,-1.5,heightOf(3,height)]);framing=fitFrame([...pickPoints,...markers],yaw,pitch,cameraDistance(),aspect);framing.scale*=viewZoom}
+ function fitScene(){if(drag&&!drag.orbit)return;const data=getData(),shared=data.frameHeight?(data.style.levelMode==='db'?3:data.frameHeight):null,aspect=canvas.clientWidth/canvas.clientHeight,key=[yaw,pitch,height,aspect,geometryVersion,viewZoom,shared].join(':');if(key===frameKey)return;frameKey=key;const markers=[];for(const x of [-2.45,2.45])for(const y of [-1.9,1.7])markers.push([x,y,-.6]);markers.push([-2.15,-1.5,heightOf(3,height)]);if(shared)for(const x of [-2.45,2.45])for(const y of [-1.9,1.7])markers.push([x,y,heightOf(shared,height)]);framing=fitFrame(shared?markers:[...pickPoints,...markers],yaw,pitch,cameraDistance(),aspect);framing.scale*=viewZoom}
  function cameraDistance(){return distance*Math.max(1,1.15/(canvas.clientWidth/canvas.clientHeight))}
  function hit(e){if(!pickPoints.length)return null;const r=canvas.getBoundingClientRect();return pickSurface(pickPoints,pickIndices,[((e.clientX-r.left)/r.width*2-1)/framing.scale+framing.x,(1-(e.clientY-r.top)/r.height*2)/framing.scale+framing.y],yaw,pitch,cameraDistance(),r.width/r.height)}
  let keys=[];
@@ -47,10 +47,10 @@ export function createSurface(getData,plot){
   program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   buffer=gl.createBuffer();indexBuffer=gl.createBuffer();lineBuffer=gl.createBuffer();gl.enable(gl.DEPTH_TEST);
  }
- function controls(){for(const [id,value] of [['yaw3d',yaw],['pitch3d',pitch],['height3d',height]])$(id).value=value;$('yawOut').value=Math.round(yaw)+'°';$('pitchAngleOut').value=Math.round(pitch)+'°';$('heightOut').value=height.toFixed(2)+'×'}
+ function controls(){for(const [id,value] of [['yaw3d',yaw],['pitch3d',pitch],['height3d',height]])$(id).value=value;$('yawOut').value=Math.round(yaw)+'°';$('pitchAngleOut').value=Math.round(pitch)+'°';$('heightOut').value=height.toFixed(2)+'×';options.onCamera?.(cameraState())}
  function rebuild(){
   const d=getData();if(!d)return;v=d.view;
-  const db=d.style.levelMode==='db',key=JSON.stringify([v,d.rows,db]);if(key!==signature){mesh=meshSamples(db?d.levels:d.samples,d.rows,v);signature=key}
+  const db=d.style.levelMode==='db',key=JSON.stringify([v,d.rows,db,d.sourceKey]);if(key!==signature){mesh=meshSamples(db?d.levels:d.samples,d.rows,v);signature=key}
   displayMesh=db?{...mesh,values:Float32Array.from(mesh.values,a=>3*dbUnit(a,d.style.dbFloor))}:mesh;
   const {nx,ny,values,bins}=mesh,verts=new Float32Array(nx*ny*6),pal=d.palettes[d.style.palette];let clipped=0;
   for(let x=0;x<nx;x++)for(let y=0;y<ny;y++){
@@ -112,16 +112,16 @@ export function createSurface(getData,plot){
  function schedule(rebuildMesh=false){needsBuild=needsBuild||rebuildMesh;cancelAnimationFrame(pending);pending=requestAnimationFrame(()=>{try{if(!enabled||lost)return;if(needsBuild){rebuild();needsBuild=false}render()}catch(e){setText($('status3d'),'errorDetail',{message:e.message})}})}
  function setMode(next){
   if(!getData())return;
-  ink.cancel();getData().annotation.setMode('pan');enabled=next;wrap.hidden=!enabled;plot.style.display=enabled?'none':'block';
+  ink.cancel();if(!options.prefix)getData().annotation.setMode('pan');enabled=next;wrap.hidden=!enabled;plot.style.display=enabled?'none':'block';
   only2d.forEach(el=>el.hidden=enabled);
   button.setAttribute('aria-selected',String(enabled));button2d.setAttribute('aria-selected',String(!enabled));button.tabIndex=enabled?0:-1;button2d.tabIndex=enabled?-1:0;
-  setText(toolbar.querySelector('#modeHint'),enabled?'hint3d':'gestureHint');
+  setText($('modeHint'),enabled?'hint3d':'gestureHint');
   if(enabled){try{if(!gl)init();schedule(true)}catch(e){setText($('status3d'),'errorDetail',{message:e.message})}}
  }
  button.onclick=()=>setMode(true);button2d.onclick=()=>setMode(false);
  toolbar.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='ArrowRight'||e.key==='End';setMode(next);(next?button:button2d).focus()};
  for(const id of ['yaw3d','pitch3d','height3d'])$(id).oninput=()=>{yaw=+$('yaw3d').value;pitch=+$('pitch3d').value;height=+$('height3d').value;controls();schedule(id==='height3d')};
- $('axisSide3d').onchange=()=>schedule();
+ $('axisSide3d').onchange=()=>{controls();schedule()};
  $('reset3d').onclick=()=>{yaw=325;pitch=55;distance=7;viewZoom=1;height=1;controls();schedule(true)};$('top3d').onclick=()=>{yaw=0;pitch=0;controls();schedule()};
  canvas.onpointerdown=e=>{if(e.button!==0||!mesh||lost)return;const key=keys.find(k=>insidePolygon(pixel(e),k.corners));if(key){getData().playReference(key.midi);return}if(ink.down(e))return;canvas.focus();const p=hit(e);drag={x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,orbit:e.shiftKey,moved:false,point:p,view:{...getData().view}};canvas.setPointerCapture(e.pointerId)};
  canvas.onpointermove=e=>{
@@ -138,10 +138,11 @@ export function createSurface(getData,plot){
  canvas.onpointerup=e=>{if(ink.up(e))return;if(!drag)return;const d=drag;drag=null;canvas.releasePointerCapture(e.pointerId);if(!d.moved&&!d.orbit&&d.point)getData().seekAt(d.view.start+(d.point[0]+2)/4*d.view.span);schedule()};
  canvas.onpointercancel=()=>{drag=null;ink.cancel()};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){drag=null;ink.cancel()}});
- canvas.addEventListener('wheel',e=>{e.preventDefault();if(drag||ink.dragging)return;const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1),f=Math.exp(clamp(delta,-300,300)*.002),d=getData();if(e.altKey){viewZoom=clamp(viewZoom/f,.5,3);schedule()}else{const p=hit(e),v=d.view;if(e.ctrlKey)d.zoomPitch(f,p?v.lo+(p[1]+1.5)/3*(v.hi-v.lo):undefined);else d.zoomTime(f,p?v.start+(p[0]+2)/4*v.span:undefined)}},{passive:false});
+ canvas.addEventListener('wheel',e=>{e.preventDefault();if(drag||ink.dragging)return;const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1),f=Math.exp(clamp(delta,-300,300)*.002),d=getData();if(e.altKey){viewZoom=clamp(viewZoom/f,.5,3);controls();schedule()}else{const p=hit(e),v=d.view;if(e.ctrlKey)d.zoomPitch(f,p?v.lo+(p[1]+1.5)/3*(v.hi-v.lo):undefined);else d.zoomTime(f,p?v.start+(p[0]+2)/4*v.span:undefined)}},{passive:false});
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;drag=null;ink.cancel();setText($('status3d'),'webglLost')});canvas.addEventListener('webglcontextrestored',()=>{lost=false;gl=null;init();schedule(true)});
  new ResizeObserver(()=>{drag=null;ink.cancel();schedule()}).observe(canvas);
  $('png3d').onclick=()=>{if(needsBuild){rebuild();needsBuild=false}render(false);const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const c=out.getContext('2d');c.drawImage(canvas,0,0);c.drawImage(labels,0,0);out.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='spectrogram-3d.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),10000)},'image/png');schedule()};
  let lastFrame='';
- return {setEnabled:setMode,anchorObject:a=>({...a,points:a.points.map(p=>({...p,h:annotationProject(p).raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor}))}),inspect:()=>({yaw,pitch,height,distance:cameraDistance(),framing:{...framing},view:{...v},nx:mesh?.nx,ny:mesh?.ny,levelMode:getData()?.style.levelMode,dbFloor:getData()?.style.dbFloor}),pasteOffset:point=>{const p=annotationProject(point);if(p.x>=0&&p.x<canvas.clientWidth-36&&p.y>=0&&p.y<canvas.clientHeight-36){const next=annotationPoint({x:p.x+18,y:p.y+18},p.raw,false);if(next)return {dt:next.t-point.t,dm:next.m-point.m}}return {dt:v.start+v.span*.5-point.t,dm:(v.lo+v.hi)/2-point.m}},repaint:()=>schedule(),cancelAnnotation:()=>ink.cancel(),get annotating(){return ink.dragging},update:()=>{ink.cancel();schedule(true)},frame:()=>{if(!enabled)return;const d=getData();if(!d)return;const key=[Math.floor(d.audio.currentTime*30),d.audio.paused,d.follow.checked,d.style.clock].join(':');if(key===lastFrame)return;lastFrame=key;schedule()}};
+ function cameraState(){return {yaw,pitch,height,distance,viewZoom,axisSide:$('axisSide3d').value}}
+ return {panel:wrap,canvas,labels,camera:cameraState,setCamera(state){if(JSON.stringify(cameraState())===JSON.stringify(state))return;({yaw,pitch,height,distance,viewZoom}=state);$('axisSide3d').value=state.axisSide;controls();schedule(true)},setEnabled:setMode,anchorObject:a=>({...a,points:a.points.map(p=>({...p,h:annotationProject(p).raw,unit:getData().style.levelMode,dbFloor:getData().style.dbFloor}))}),inspect:()=>({yaw,pitch,height,distance:cameraDistance(),framing:{...framing},view:{...v},nx:mesh?.nx,ny:mesh?.ny,levelMode:getData()?.style.levelMode,dbFloor:getData()?.style.dbFloor}),pasteOffset:point=>{const p=annotationProject(point);if(p.x>=0&&p.x<canvas.clientWidth-36&&p.y>=0&&p.y<canvas.clientHeight-36){const next=annotationPoint({x:p.x+18,y:p.y+18},p.raw,false);if(next)return {dt:next.t-point.t,dm:next.m-point.m}}return {dt:v.start+v.span*.5-point.t,dm:(v.lo+v.hi)/2-point.m}},repaint:()=>schedule(),cancelAnnotation:()=>ink.cancel(),get annotating(){return ink.dragging},update:()=>{ink.cancel();schedule(true)},frame:()=>{if(!enabled)return;const d=getData();if(!d)return;const key=[Math.floor(d.audio.currentTime*30),d.audio.paused,d.follow.checked,d.style.clock].join(':');if(key===lastFrame)return;lastFrame=key;schedule()}};
 }

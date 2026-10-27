@@ -1,0 +1,15 @@
+export function createWaveform({audio,seek,getData,isStereo}){
+ const panel=document.createElement('section');panel.id='waveformPanel';panel.hidden=true;
+ panel.innerHTML='<div class="waveform-heading"><span data-i18n="waveform"></span><output id="waveformTime"></output></div><canvas id="waveform" tabindex="0" role="slider" aria-valuemin="0" data-i18n-aria="waveformSeek"></canvas>';
+ const canvas=panel.querySelector('canvas'),output=panel.querySelector('output');let down=false,last=-1;
+ function draw(){if(panel.hidden)return;const d=getData();if(!d?.waveform)return;const w=Math.max(200,canvas.clientWidth),h=80,scale=devicePixelRatio||1;canvas.width=w*scale;canvas.height=h*scale;const c=canvas.getContext('2d');c.scale(scale,scale);c.fillStyle='#f5f6f8';c.fillRect(0,0,w,h);
+  const lanes=isStereo()?[d.waveform.left,d.waveform.right]:[d.waveform.combined],usable=58;
+  lanes.forEach((data,j)=>{const lane=usable/lanes.length,mid=8+lane*(j+.5);c.strokeStyle=j?'#7b61a8':'#697484';c.beginPath();for(let x=0;x<w;x++){const begin=Math.floor(x/w*d.waveform.bins),end=Math.min(d.waveform.bins,Math.max(begin+1,Math.ceil((x+1)/w*d.waveform.bins)));let min=0,max=0;for(let bin=begin;bin<end;bin++){min=Math.min(min,data[bin*2]);max=Math.max(max,data[bin*2+1])}c.moveTo(x,mid-max*lane*.45);c.lineTo(x,mid-min*lane*.45)}c.stroke();if(lanes.length===2){c.fillStyle='#333';c.font='10px system-ui';c.fillText(j?'R':'L',4,mid)}});
+  const x=Math.max(0,Math.min(w,audio.currentTime/d.duration*w));c.fillStyle='#0071e310';c.fillRect(0,0,x,usable+8);c.strokeStyle='#0071e3';c.lineWidth=1.5;c.beginPath();c.moveTo(x,0);c.lineTo(x,usable+8);c.stroke();c.fillStyle='#747b86';c.font='10px system-ui';for(let i=0;i<=4;i++){c.textAlign=i===0?'left':i===4?'right':'center';c.fillText((d.duration*i/4).toFixed(1)+'s',w*i/4,77)}
+  output.textContent=audio.currentTime.toFixed(3)+' / '+d.duration.toFixed(3)+' s';canvas.setAttribute('aria-valuemax',d.duration);canvas.setAttribute('aria-valuenow',audio.currentTime.toFixed(3));canvas.setAttribute('aria-valuetext',output.textContent);last=audio.currentTime;
+ }
+ function at(e){const d=getData();if(!d)return;const r=canvas.getBoundingClientRect();seek(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*d.duration);draw()}
+ canvas.onpointerdown=e=>{if(e.button!==0)return;down=true;canvas.focus();canvas.setPointerCapture(e.pointerId);at(e)};canvas.onpointermove=e=>{if(down)at(e)};canvas.onpointerup=e=>{down=false;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId)};canvas.onpointercancel=()=>{down=false};
+ canvas.onkeydown=e=>{const d=getData();if(!d)return;let value;if(e.key==='Home')value=0;else if(e.key==='End')value=d.duration;else if(['ArrowLeft','ArrowRight'].includes(e.key))value=audio.currentTime+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?1:1/60);else return;e.preventDefault();seek(Math.max(0,Math.min(d.duration,value)));draw()};
+ new ResizeObserver(draw).observe(canvas);return {panel,update:draw,frame(){if(audio.currentTime!==last)draw()}};
+}
