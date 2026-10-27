@@ -18,3 +18,9 @@
 .lab-stage:has(#waveformPanel:not([hidden])) [id$="spectrum1d"]{height:clamp(260px,calc(var(--lab-screen-height,900px) - 520px),500px)}
 .lab-stage:fullscreen .stereo-enabled #plot,.lab-stage.expanded .stereo-enabled #plot,.lab-stage:fullscreen .stereo-enabled #rightPlot,.lab-stage.expanded .stereo-enabled #rightPlot{height:calc(100dvh - 175px)!important}
 #stereoAnnotationHint{font-size:10px;line-height:1.5}
+
+/* Six direct views: one column per dimension, combined above stereo. */
+.view-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-column:1/-1;gap:4px 8px;background:var(--panel);padding:5px;border-radius:10px;min-width:0}
+.view-tabs button{width:100%;font-size:11px;min-height:33px;white-space:normal;line-height:1.4}
+.lab-quick-zoom{grid-row:3;grid-column:1/-1;justify-content:flex-end}
+@media(max-width:739px){.view-tabs{width:100%;gap:4px}.view-tabs button{font-size:10px;padding:5px}}

@@ -1,12 +1,12 @@
-import {createWaveform} from './waveform.mjs?v=stereo-1';
-import {createSpectrum} from './spectrum-1d.mjs?v=stereo-1';
+import {createWaveform} from './waveform.mjs?v=six-modes-1';
+import {createSpectrum} from './spectrum-1d.mjs?v=six-modes-1';
 'use strict';
 import {amplitudeDB,dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
 import {drawAnnotations} from './annotation-render.mjs?v=db-1';
 import {playReferenceNote} from './piano-reference.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=stereo-1';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=stereo-1';
+import {createSurface} from './surface-3d.mjs?v=six-modes-1';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=six-modes-1';
 import {validAnnotation,strokeWidth,strokeTypes,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=db-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
@@ -15,7 +15,7 @@ const names=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const hz=m=>440*2**((m-69)/12),note=m=>names[((m%12)+12)%12]+(Math.floor(m/12)-1);
 const binPitch=b=>15.5+(b+.5)/8,pitchBin=m=>(m-15.5)*8-.5;
 let sourceName='spectrogram',samples,levels,peaks,rawEncoding=false,start=10,span=10,lo=15.5,hi=135.5,W=1000,H=700,dirty=true,lastPlay=-1,drag=null,modeName='pan';
-let spectrum,rightSpectrum,rightSurface,rightCanvas,rightReadout,waveform,stereoPlots,rightView,leftLabel,stereoToggle,stereoStatus,stereoExport,combinedData,channelData,waveformData,channelCount=1,stereoEnabled=false,stereoBusy=false,sourceKey='combined',rightDirty=true,viewMode='2d';
+let spectrum,rightSpectrum,rightSurface,rightCanvas,rightReadout,waveform,stereoPlots,rightView,leftLabel,stereoStatus,stereoExport,combinedData,channelData,waveformData,channelCount=1,stereoEnabled=false,stereoBusy=false,requestedStereo=false,sourceKey='combined',rightDirty=true,viewMode='2d';
 const rightCache=document.createElement('canvas');
 const cached=document.createElement('canvas');
 const view=()=>({start,span,lo,hi});
@@ -262,11 +262,26 @@ function switchView(next){
  if(next==='1d'&&viewMode!=='1d'){audio.pause();$('seek').value=audio.currentTime}
  viewMode=next;surface.setEnabled(next==='3d');spectrum.panel.hidden=next!=='1d';canvas.style.display=next==='2d'?'block':'none';
  for(const id of ['readout','gestureHint'])$(id).hidden=next!=='2d';
- for(const id of ['1d','2d','3d']){$('mode'+id).setAttribute('aria-selected',String(id===next));$('mode'+id).tabIndex=id===next?0:-1}
+ syncModeTabs();
  syncStereoView();updateLevelUI();spectrum.update();window.dispatchEvent(new Event('lab-view-change'));
 }
-for(const id of ['1d','2d','3d'])$('mode'+id).onclick=()=>switchView(id);
-document.querySelector('.view-tabs').onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)||!e.target.matches('[role=tab]'))return;e.preventDefault();const modes=['1d','2d','3d'],i=modes.indexOf(viewMode),next=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;switchView(modes[next]);$('mode'+modes[next]).focus()};
+const modeButtons=[];
+for(const mode of ['1d','2d','3d']){
+ const combined=$('mode'+mode),split=document.createElement('button');split.id='mode'+mode+'Stereo';split.setAttribute('role','tab');split.setAttribute('aria-controls',combined.getAttribute('aria-controls'));combined.after(split);
+ for(const [button,stereo] of [[combined,false],[split,true]]){button.dataset.i18n='mode'+mode+(stereo?'Stereo':'Combined');button.dataset.mode=mode;button.dataset.stereo=String(stereo);button.onclick=()=>selectMode(mode,stereo);modeButtons.push(button)}
+}
+function syncModeTabs(){
+ for(const button of modeButtons){const split=button.dataset.stereo==='true',selected=button.dataset.mode===viewMode&&split===stereoEnabled;button.disabled=split&&(channelCount<2||stereoBusy);button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1}
+ for(const [panel,mode] of [['panel1d','1d'],['plot','2d'],['panel3d','3d']])$(panel)?.setAttribute('aria-labelledby','mode'+mode+(stereoEnabled?'Stereo':''));
+}
+function selectMode(mode,split){
+ if(!samples||split&&(channelCount<2||stereoBusy))return;requestedStereo=split;
+ if(!split){enableStereo(false);switchView(mode);return}
+ if(channelData){enableStereo(true);switchView(mode);return}
+ switchView(mode);stereoBusy=true;syncModeTabs();setText(stereoStatus,'stereoLoading',{percent:0});parent.postMessage({type:'stereo-request'},location.origin);
+}
+document.querySelector('.view-tabs').onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)||!e.target.matches('[role=tab]'))return;e.preventDefault();const buttons=modeButtons.filter(b=>!b.disabled),i=buttons.indexOf(e.target),next=e.key==='Home'?0:e.key==='End'?buttons.length-1:(i+(e.key==='ArrowRight'?1:buttons.length-1))%buttons.length;buttons[next].click();buttons[next].focus()};
+syncModeTabs();
 audio.addEventListener('seeking',()=>{spectrum.update();rightSpectrum?.update();waveform?.update()});
 window.viewerTest.spectrum=()=>({...spectrum.inspect(),playheadTime:audio.currentTime,mode:viewMode});
 
@@ -301,22 +316,21 @@ function syncStereoView(){
 }
 function enableStereo(enabled){
  stereoEnabled=enabled;sourceKey=enabled?'left':'combined';({samples,levels,peaks}=enabled?channelData.left:combinedData);
- if(enabled)ensureRightViews();stereoToggle.checked=enabled;syncStereoView();changed();
+ if(enabled)ensureRightViews();syncStereoView();syncModeTabs();changed();
 }
 function mountStereo(){
- const transport=document.querySelector('.lab-top>.tools'),label=document.createElement('label');label.className='check stereo-toggle';label.innerHTML='<input type="checkbox" id="stereoToggle" disabled><span data-i18n="stereoView"></span>';transport.append(label);stereoToggle=$('stereoToggle');stereoStatus=document.createElement('span');stereoStatus.id='stereoStatus';stereoStatus.className='muted';stereoStatus.setAttribute('role','status');transport.append(stereoStatus);
+ const transport=document.querySelector('.lab-top>.tools');stereoStatus=document.createElement('span');stereoStatus.id='stereoStatus';stereoStatus.className='muted';stereoStatus.setAttribute('role','status');transport.append(stereoStatus);
  const stage=$('lab-stage');stereoPlots=document.createElement('div');stereoPlots.id='channelPlots';const left=document.createElement('section');left.className='channel-view';leftLabel=document.createElement('h2');leftLabel.className='channel-label';leftLabel.dataset.i18n='leftChannel';leftLabel.hidden=true;left.append(leftLabel);rightView=document.createElement('section');rightView.className='channel-view';rightView.id='rightChannelView';rightView.hidden=true;const heading=document.createElement('h2');heading.className='channel-label';heading.dataset.i18n='rightChannel';rightView.append(heading);stereoPlots.append(left,rightView);stage.querySelector('.fullscreen-bar').after(stereoPlots);
  for(const el of [spectrum.panel,$('panel3d'),canvas,$('levelLegend'),$('readout')])left.append(el);
  waveform=createWaveform({audio,seek:time=>{audio.currentTime=time;$('seek').value=time;overlay();spectrum.update();rightSpectrum?.update()},getData:()=>samples?{waveform:waveformData,duration:meta.duration}:null,isStereo:()=>stereoEnabled});$('seek').before(waveform.panel);
  const annotationHint=document.createElement('p');annotationHint.id='stereoAnnotationHint';annotationHint.className='muted';annotationHint.dataset.i18n='stereoAnnotationHint';annotationHint.hidden=true;$('lab-panel-draw').append(annotationHint);
  stereoExport=document.createElement('button');stereoExport.id='stereoPNG';stereoExport.dataset.i18n='stereoPNG';stereoExport.hidden=true;$('lab-panel-export').append(stereoExport);
  stereoExport.onclick=()=>{audio.pause();const capture=right=>{if(viewMode==='1d')return (right?rightSpectrum:spectrum).canvas;if(viewMode==='2d')return right?rightCanvas:canvas;const surfaceView=right?rightSurface:surface,out=document.createElement('canvas');out.width=surfaceView.canvas.width;out.height=surfaceView.canvas.height;const c=out.getContext('2d');c.drawImage(surfaceView.canvas,0,0);c.drawImage(surfaceView.labels,0,0);return out};const l=capture(false),r=capture(true),out=document.createElement('canvas');out.width=Math.max(l.width,r.width);out.height=l.height+r.height+100;const c=out.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,out.width,out.height);c.fillStyle='#222';c.font='16px system-ui';c.fillText(`MuSpec Lab · ${sourceName} · ${audio.currentTime.toFixed(3)} s · L`,12,22);c.drawImage(l,0,35);c.fillText('R',12,l.height+62);c.drawImage(r,0,l.height+75);out.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`muspec-stereo-${viewMode}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)})};
- stereoToggle.onchange=()=>{if(!stereoToggle.checked){if(combinedData)enableStereo(false);return}if(channelData){enableStereo(true);return}stereoToggle.checked=false;stereoToggle.disabled=true;stereoBusy=true;setText(stereoStatus,'stereoLoading',{percent:0});parent.postMessage({type:'stereo-request'},location.origin)};
  window.addEventListener('message',e=>{
   if(e.source!==parent||e.origin!==location.origin)return;const d=e.data;
   if(d?.type==='stereo-progress')setText(stereoStatus,'stereoLoading',{percent:Math.round(d.value*100)});
-  if(d?.type==='stereo-error'){stereoBusy=false;stereoToggle.disabled=false;stereoStatus.textContent=d.message}
-  if(d?.type==='stereo-done'){try{const decode=a=>{const data={maxValue:a.maxValue||3,samples:new Float32Array(a.values),levels:new Float32Array(a.levels),peaks:new Uint8Array(a.peaks)};if(a.rows!==meta.rows||data.samples.length!==samples.length||data.levels.length!==samples.length||data.peaks.length!==samples.length)throw Error(t('dataError'));return data};channelData={left:decode(d.left),right:decode(d.right)};stereoBusy=false;stereoToggle.disabled=false;setText(stereoStatus,'stereoHint');enableStereo(true)}catch(error){stereoToggle.disabled=false;stereoStatus.textContent=error.message}}
+  if(d?.type==='stereo-error'){stereoBusy=false;requestedStereo=false;syncModeTabs();stereoStatus.textContent=d.message}
+  if(d?.type==='stereo-done'){try{const decode=a=>{const data={maxValue:a.maxValue||3,samples:new Float32Array(a.values),levels:new Float32Array(a.levels),peaks:new Uint8Array(a.peaks)};if(a.rows!==meta.rows||data.samples.length!==samples.length||data.levels.length!==samples.length||data.peaks.length!==samples.length)throw Error(t('dataError'));return data};channelData={left:decode(d.left),right:decode(d.right)};stereoBusy=false;setText(stereoStatus,'stereoHint');enableStereo(requestedStereo)}catch(error){stereoBusy=false;requestedStereo=false;syncModeTabs();stereoStatus.textContent=error.message}}
  });
 }
 
@@ -409,7 +423,7 @@ $('levelMode').onchange=()=>{cancelDrag();changed()};$('dbFloor').onchange=chang
 initLanguage();syncSelection();
 window.addEventListener('lab-language-change',()=>{syncSelection(false);syncZoom(false);updateLevelUI();surface.update();spectrum.update();rightSurface?.update();rightSpectrum?.update();waveform?.update()});
 syncZoom();if(payload){loadInk();init()}else{
- window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;sourceName=d.name||sourceName;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);levels=d.levels?new Float32Array(d.levels):null;if(levels&&levels.length!==samples.length)throw Error(t('dataError'));$('levelMode').querySelector('[value=db]').disabled=!levels;rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error(t('dataError'));if(samples.length!==meta.rows*960)throw Error(t('dataError'));combinedData={samples,levels,peaks};channelCount=d.channelCount||1;waveformData=d.waveform;stereoToggle.disabled=channelCount<2;setText(stereoStatus,channelCount<2?'monoSource':'stereoHint');storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · MuSpec Lab v1.0.1';setText($('status'),'ready');syncZoom();resize();waveform?.update();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
+ window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='analysis-ready'||samples)return;try{const d=e.data;sourceName=d.name||sourceName;meta.rows=d.rows;meta.duration=d.duration;samples=new Float32Array(d.values);levels=d.levels?new Float32Array(d.levels):null;if(levels&&levels.length!==samples.length)throw Error(t('dataError'));$('levelMode').querySelector('[value=db]').disabled=!levels;rawEncoding=d.encoding==='raw-cqt-v1';peaks=d.peaks?new Uint8Array(d.peaks):null;if(peaks&&peaks.length!==samples.length)throw Error(t('dataError'));if(samples.length!==meta.rows*960)throw Error(t('dataError'));combinedData={samples,levels,peaks};channelCount=d.channelCount||1;waveformData=d.waveform;syncModeTabs();setText(stereoStatus,channelCount<2?'monoSource':'stereoHint');storageKey='musical-detail:'+d.key+':annotations:v1';loadInk();audio.src=URL.createObjectURL(d.audio);$('seek').max=meta.duration;start=0;span=Math.min(10,meta.duration);document.querySelector('h1').textContent=d.name;document.title=d.name+' · MuSpec Lab v1.0.1';setText($('status'),'ready');syncZoom();resize();waveform?.update();requestAnimationFrame(tick);parent.postMessage({type:'viewer-ready'},location.origin)}catch(error){parent.postMessage({type:'viewer-error',message:error.message},location.origin)}});
  new ResizeObserver(()=>parent.postMessage({type:'viewer-height',height:document.body.scrollHeight},location.origin)).observe(document.body);
  parent.postMessage({type:'viewer-listening'},location.origin);
 }
