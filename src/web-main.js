@@ -1,7 +1,7 @@
 import './lab.css';
 import {waveformEnvelope} from './waveform-data.mjs';
 import {analysisMemory} from './analysis-memory.mjs';
-const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=six-modes-1',document.baseURI).href);
+const {t,setText,initLanguage}=await import(/* @vite-ignore */ new URL('./i18n.mjs?v=desktop-fit-1',document.baseURI).href);
 const $=id=>document.getElementById(id),drop=$('drop-zone'),input=$('file-input');
 initLanguage();
 let worker,stereoWorker,activeFile,jobId=0,frame,pending;
@@ -29,13 +29,13 @@ async function analyse(file){reset();const id=jobId;$('job').hidden=false;drop.h
   progress(5,'analysing');worker=new Worker(new URL('./analysis-worker.js',import.meta.url),{type:'module'});
   worker.onmessage=({data})=>{if(id!==jobId)return;if(data.type==='progress')progress(5+90*data.value,'analysisProgress',{seconds:Math.floor(data.seconds),duration:Math.ceil(duration)});
    if(data.type==='error')failure(Error(data.message));
-   if(data.type==='done'){worker.terminate();worker=null;activeFile=file;pending={...data,type:'analysis-ready',audio:file,key,name:file.name,channelCount,waveform};progress(97,'opening');frame=document.createElement('iframe');frame.dataset.i18nTitle='viewerTitle';frame.title=t('viewerTitle');frame.src=new URL('./viewer.html?v=six-modes-1',document.baseURI).href;frame.allow='clipboard-read; clipboard-write; fullscreen';frame.allowFullscreen=true;$('viewer-host').replaceChildren(frame);$('viewer-host').hidden=false;$('cancel').hidden=true}
+   if(data.type==='done'){worker.terminate();worker=null;activeFile=file;pending={...data,type:'analysis-ready',audio:file,key,name:file.name,channelCount,waveform};progress(97,'opening');frame=document.createElement('iframe');frame.dataset.i18nTitle='viewerTitle';frame.title=t('viewerTitle');frame.src=new URL('./viewer.html?v=desktop-fit-1',document.baseURI).href;frame.allow='clipboard-read; clipboard-write; fullscreen';frame.allowFullscreen=true;$('viewer-host').replaceChildren(frame);$('viewer-host').hidden=false;$('cancel').hidden=true}
   };
   worker.onerror=e=>{if(id===jobId)failure(Error(e.message||t('failed')))};
   worker.postMessage({left:left.buffer,right:right.buffer,sampleRate},[...new Set([left.buffer,right.buffer])]);
  }catch(e){if(id===jobId)failure(e)}
 }
-window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==frame?.contentWindow)return;if(e.data?.type==='stereo-request')analyseStereo();if(e.data?.type==='viewer-expanded')document.body.classList.toggle('viewer-expanded',e.data.expanded===true);if(e.data?.type==='viewer-height'&&Number.isFinite(e.data.height)){frame.style.height=Math.max(400,Math.min(4000,e.data.height+4))+'px'}if(e.data?.type==='viewer-listening'&&pending){const data=pending;pending=null;frame.contentWindow.postMessage(data,location.origin,[data.values,...(data.levels?[data.levels]:[]),...(data.peaks?[data.peaks]:[])])}if(e.data?.type==='viewer-ready'){progress(100,'ready');$('change-file').hidden=false;document.body.classList.add('has-viewer');frame.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})}if(e.data?.type==='viewer-error')failure(Error(e.data.message))});
+window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==frame?.contentWindow)return;if(e.data?.type==='stereo-request')analyseStereo();if(e.data?.type==='viewer-expanded')document.body.classList.toggle('viewer-expanded',e.data.expanded===true);if(e.data?.type==='viewer-height'&&Number.isFinite(e.data.height)){frame.style.height=Math.max(400,Math.min(4000,e.data.height+4))+'px'}if(e.data?.type==='viewer-listening'&&pending){const data=pending;pending=null;frame.contentWindow.postMessage(data,location.origin,[data.values,...(data.levels?[data.levels]:[]),...(data.peaks?[data.peaks]:[])])}if(e.data?.type==='viewer-ready'){progress(100,'ready');$('change-file').hidden=false;document.body.classList.add('has-viewer');(matchMedia('(min-width:1000px) and (min-height:600px)').matches?window.scrollTo({top:0,behavior:'instant'}):frame.scrollIntoView({behavior:'instant',block:'start'}))}if(e.data?.type==='viewer-error')failure(Error(e.data.message))});
 drop.onclick=()=>input.click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}};
 drop.ondragover=e=>{e.preventDefault();drop.classList.add('dragging')};drop.ondragleave=()=>drop.classList.remove('dragging');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('dragging');if(e.dataTransfer.files[0])analyse(e.dataTransfer.files[0])};
 input.onchange=()=>{if(input.files[0])analyse(input.files[0])};$('cancel').onclick=reset;$('change-file').onclick=reset;

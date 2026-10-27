@@ -1,12 +1,12 @@
-import {createWaveform} from './waveform.mjs?v=six-modes-1';
-import {createSpectrum} from './spectrum-1d.mjs?v=six-modes-1';
+import {createWaveform} from './waveform.mjs?v=desktop-fit-1';
+import {createSpectrum} from './spectrum-1d.mjs?v=desktop-fit-1';
 'use strict';
 import {amplitudeDB,dbUnit,dbRGB} from './signal-level.mjs?v=db-1';
 import {drawAnnotations} from './annotation-render.mjs?v=db-1';
 import {playReferenceNote} from './piano-reference.mjs?v=db-1';
 import {referenceRGB,legacyIntensity} from './reference-color.mjs';
-import {createSurface} from './surface-3d.mjs?v=six-modes-1';
-import {t,setText,translate,initLanguage} from './i18n.mjs?v=six-modes-1';
+import {createSurface} from './surface-3d.mjs?v=desktop-fit-1';
+import {t,setText,translate,initLanguage} from './i18n.mjs?v=desktop-fit-1';
 import {validAnnotation,strokeWidth,strokeTypes,objectBounds,hitObject,translateObject} from './annotation-objects.mjs?v=db-1';
 const $=id=>document.getElementById(id),audio=$('audio'),canvas=$('plot'),ctx=canvas.getContext('2d');
 const payload=$('payload'),meta=payload?JSON.parse(payload.textContent):{rows:0,duration:0};payload?.remove();
@@ -135,7 +135,7 @@ function updateLevelUI(){
  $('levelHelp').hidden=!db;setText($('levelHelp'),'dbHelp');$('pianoFeedback').hidden=viewMode==='1d'||!style().piano;
  if(db){const s=style(),colors=Array.from({length:25},(_,i)=>{const rgb=dbRGB(10**((s.dbFloor+i/24*-s.dbFloor)/20),s.palette==='reference'?null:palettes[s.palette],referenceRGB,s.dbFloor);return `rgb(${rgb.map(Math.round).join(',')})`});$('levelGradient').style.background=`linear-gradient(to right,${colors.join(',')})`;$('levelTicks').replaceChildren(...[s.dbFloor,s.dbFloor*2/3,s.dbFloor/3,0].map(n=>{const el=document.createElement('span');el.textContent=n;return el}))}
 }
-function resize(){canvas.width=Math.max(320,Math.floor(canvas.clientWidth));canvas.height=Math.max(stereoEnabled?220:400,Math.floor(canvas.clientHeight));W=canvas.width;H=canvas.height;changed()}new ResizeObserver(resize).observe(canvas);
+function resize(){canvas.width=Math.max(320,Math.floor(canvas.clientWidth));canvas.height=Math.max(120,Math.floor(canvas.clientHeight));W=canvas.width;H=canvas.height;changed()}new ResizeObserver(resize).observe(canvas);
 function changed(){updateLevelUI();const mono=$('palette').value==='gray';setText($('gainLabelText'),mono?'inkGain':'gain');$('gain').dataset.i18nAria=mono?'inkGain':'gain';$('gain').setAttribute('aria-label',t(mono?'inkGain':'gain'));canvas.style.backgroundColor=mono?'#ffffff':'#0c0b12';dirty=true;rightDirty=true;invalidateCapture();surface.update();rightSurface?.update();spectrum?.update();rightSpectrum?.update();waveform?.update()}
 function syncZoom(redraw=true){for(const [id,value,text] of [['span',String(span),span.toFixed(2)],['range',`${lo},${hi}`,`${note(Math.round(lo))}–${note(Math.round(hi))} (${t('zoomed')})`]]){const select=$(id);select.querySelector('option[data-custom]')?.remove();if(![...select.options].some(o=>o.value===value)){const o=new Option(text,value);o.dataset.custom='1';select.add(o)}select.value=value}
  setText($('zoomInfo'),'zoomInfo',{start:formatTime(start),end:formatTime(start+span),range:(hi-lo).toFixed(1)});if(redraw)changed()}
@@ -362,6 +362,7 @@ function mountLabWorkbench(){
  const aside=document.createElement('aside');aside.className='lab-sidebar';aside.dataset.i18nAria='workspace';
  const rail=document.createElement('nav');rail.className='lab-tool-rail';rail.dataset.i18nAria='workspace';
  main.prepend(top);top.append(tabs,transport);top.after(grid);grid.append(stage,aside);aside.append(rail);
+ const reading=main.querySelector('.reading-notes');if(reading)aside.append(reading);
  stage.append(spectrum.panel,panel3d,canvas,$('readout'),$('seek'),hint);
  const quick=document.createElement('div');quick.className='lab-quick-zoom';
  for(const [label,ids] of [['time',['timeIn','timeOut']],['pitch',['pitchIn','pitchOut']]]){
